@@ -1,5 +1,5 @@
 import { OptionalSignal, useOptionalSignal } from '../../utils/OptionalSignal.js'
-import { buyParticipationTokens, contributeToMarketDispute, contributeToMarketDisputeOnTentativeOutcome, disavowCrowdsourcers, doInitialReport, fetchHotLoadingCurrentDisputeWindowData, fetchHotLoadingMarketData, finalizeMarket, getDisputeWindow, getDisputeWindowInfo, getForkValues, getPreemptiveDisputeCrowdsourcer, getReportingHistory, getStakeOfReportingParticipant, getStakesOnAllOutcomesOnYesNoMarketOrCategorical, getWinningPayoutNumerators, migrateThroughOneFork, ReportingHistoryElement } from '../../utils/augurContractUtils.js'
+import { contributeToMarketDispute, contributeToMarketDisputeOnTentativeOutcome, disavowCrowdsourcers, doInitialReport, fetchHotLoadingMarketData, finalizeMarket, getDisputeWindow, getDisputeWindowInfo, getForkValues, getPreemptiveDisputeCrowdsourcer, getReportingHistory, getStakeOfReportingParticipant, getStakesOnAllOutcomesOnYesNoMarketOrCategorical, getWinningPayoutNumerators, migrateThroughOneFork, ReportingHistoryElement } from '../../utils/augurContractUtils.js'
 import { addressString, areEqualArrays, bigintToDecimalString, decimalStringToBigint, formatUnixTimestampISO } from '../../utils/ethereumUtils.js'
 import { ExtraInfo } from '../../CreateMarketUI/types/createMarketTypes.js'
 import { MARKET_TYPES } from '../../utils/constants.js'
@@ -10,30 +10,6 @@ import { MarketReportingOptions, MarketReportingWithoutStake, OutcomeStake } fro
 import { Market, MarketData } from '../../SharedUI/Market.js'
 import { getAllPayoutNumeratorCombinations, getOutcomeName } from '../../utils/augurUtils.js'
 import { ReadClient, WriteClient } from '../../utils/ethereumWallet.js'
-
-type DisputeWindowData = {
-    disputeWindow: `0x${ string }`
-    startTime: bigint
-    endTime: bigint
-    purchased: bigint
-    fees: bigint
-}
-
-interface DisputeWindowProps {
-	disputeWindowData: OptionalSignal<DisputeWindowData>
-}
-export const DisputeWindow = ({ disputeWindowData }: DisputeWindowProps) => {
-	if (disputeWindowData.deepValue === undefined) return <></>
-	return <div class = 'panel'>
-		<div style = 'display: grid'>
-			<span><b>Dispute Window:</b>{ disputeWindowData.deepValue.disputeWindow }</span>
-			<span><b>Start Time:</b>{ formatUnixTimestampISO(disputeWindowData.deepValue.startTime) }</span>
-			<span><b>End Time:</b>{ formatUnixTimestampISO(disputeWindowData.deepValue.endTime) }</span>
-			<span><b>Fees:</b>{ bigintToDecimalString(disputeWindowData.deepValue.fees, 18n, 2) } DAI</span>
-			<span><b>Purchased:</b>{ disputeWindowData.deepValue.purchased } Participation Tokens</span>
-		</div>
-	</div>
-}
 
 interface ForkMigrationProps {
 	marketData: OptionalSignal<MarketData>
@@ -280,7 +256,6 @@ interface ReportingProps {
 export const Reporting = ({ maybeReadClient, maybeWriteClient, universe, reputationTokenAddress }: ReportingProps) => {
 	const marketAddressString = useSignal<string>('')
 	const marketData = useOptionalSignal<MarketData>(undefined)
-	const disputeWindowData = useOptionalSignal<DisputeWindowData>(undefined)
 	const outcomeStakes = useOptionalSignal<readonly OutcomeStake[]>(undefined)
 	const disputeWindowAddress = useOptionalSignal<AccountAddress>(undefined)
 	const disputeWindowInfo = useOptionalSignal<Awaited<ReturnType<typeof getDisputeWindowInfo>>>(undefined)
@@ -302,7 +277,6 @@ export const Reporting = ({ maybeReadClient, maybeWriteClient, universe, reputat
 		if (readClient === undefined) throw new Error('missing readClient')
 		if (reputationTokenAddress.deepValue === undefined) throw new Error('missing reputationTokenAddress')
 		marketData.deepValue = undefined
-		disputeWindowData.deepValue = undefined
 		outcomeStakes.deepValue = undefined
 		disputeWindowAddress.deepValue = undefined
 		disputeWindowInfo.deepValue = undefined
@@ -318,7 +292,6 @@ export const Reporting = ({ maybeReadClient, maybeWriteClient, universe, reputat
 		const parsedExtraInfo = getParsedExtraInfo(newMarketData.extraInfo)
 		marketData.deepValue = { marketAddress: parsedMarketAddressString, parsedExtraInfo, hotLoadingMarketData: newMarketData }
 		const currentMarketData = marketData.deepValue
-		disputeWindowData.deepValue = await fetchHotLoadingCurrentDisputeWindowData(readClient, currentMarketData.hotLoadingMarketData.universe)
 		if (MARKET_TYPES[currentMarketData.hotLoadingMarketData.marketType] === 'Yes/No' || MARKET_TYPES[currentMarketData.hotLoadingMarketData.marketType] === 'Categorical') {
 			const allPayoutNumerators = getAllPayoutNumeratorCombinations(marketData.deepValue.hotLoadingMarketData.numOutcomes, marketData.deepValue.hotLoadingMarketData.numTicks)
 			const winningOption = await getWinningPayoutNumerators(readClient, parsedMarketAddressString)
@@ -351,13 +324,6 @@ export const Reporting = ({ maybeReadClient, maybeWriteClient, universe, reputat
 		reportingHistory.deepValue = await getReportingHistory(readClient, parsedMarketAddressString, newMarketData.disputeRound)
 	}
 
-	const buyParticipationTokensButton = async () => {
-		const writeClient = maybeWriteClient.deepPeek()
-		if (writeClient === undefined) throw new Error('missing writeClient')
-		if (universe.deepValue === undefined) throw new Error('missing universe')
-		await buyParticipationTokens(writeClient, universe.deepValue, 10n)
-	}
-
 	const finalizeMarketButton = async () => {
 		const writeClient = maybeWriteClient.deepPeek()
 		if (writeClient === undefined) throw new Error('missing writeClient')
@@ -384,8 +350,6 @@ export const Reporting = ({ maybeReadClient, maybeWriteClient, universe, reputat
 			/>
 			<button class = 'button is-primary' onClick = { fetchMarketData }>Fetch Market Information</button>
 			<Market marketData = { marketData } universe = { universe }/>
-			<DisputeWindow disputeWindowData = { disputeWindowData }/>
-			<button class = 'button is-primary' onClick = { buyParticipationTokensButton }>Buy 10 Particiption Tokens</button>
 			<DisplayStakes outcomeStakes = { outcomeStakes } marketData = { marketData } maybeWriteClient = { maybeWriteClient } preemptiveDisputeCrowdsourcerStake = { preemptiveDisputeCrowdsourcerStake } disputeWindowInfo = { disputeWindowInfo } forkValues = { forkValues }/>
 			<DisplayDisputeWindow disputeWindowAddress = { disputeWindowAddress } disputeWindowInfo = { disputeWindowInfo }/>
 			<DisplayForkValues forkValues = { forkValues }/>

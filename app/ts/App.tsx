@@ -17,6 +17,7 @@ import { getReputationTokenForUniverse, getUniverseForkingInformation, isKnownUn
 import { humanReadableDateDelta, SomeTimeAgo } from './ReportingUI/components/SomeTimeAgo.js'
 import { Migration } from './MigrationUI/components/Migration.js'
 import { getErc20TokenBalance } from './utils/erc20.js'
+import { ParticipationTokens } from './ABI/ParticipationTokensUI/ParticipationTokensUI.js'
 
 interface UniverseComponentProps {
 	universe: OptionalSignal<AccountAddress>
@@ -162,7 +163,8 @@ export function App() {
 		{ title: 'Market Creation', path: 'market-creation', component: <CreateYesNoMarket maybeReadClient = { maybeReadClient } maybeWriteClient = { maybeWriteClient } universe = { universe } reputationTokenAddress = { reputationTokenAddress }/> },
 		{ title: 'Reporting', path: 'reporting', component: <Reporting maybeReadClient = { maybeReadClient } maybeWriteClient = { maybeWriteClient } universe = { universe } reputationTokenAddress = { reputationTokenAddress }/> },
 		{ title: 'Claim Funds', path: 'claim-funds', component: <ClaimFunds maybeReadClient = { maybeReadClient } maybeWriteClient = { maybeWriteClient }/> },
-		{ title: 'Migration', path: 'migration', component: <Migration maybeReadClient = { maybeReadClient } maybeWriteClient = { maybeWriteClient } reputationTokenAddress = { reputationTokenAddress } universe = { universe } universeForkingInformation = { universeForkingInformation } pathSignal = { pathSignal }/> }
+		{ title: 'Migration', path: 'migration', component: <Migration maybeReadClient = { maybeReadClient } maybeWriteClient = { maybeWriteClient } reputationTokenAddress = { reputationTokenAddress } universe = { universe } universeForkingInformation = { universeForkingInformation } pathSignal = { pathSignal }/> },
+		{ title: 'Participation Tokens', path: 'participation-tokens', component: <ParticipationTokens maybeReadClient = { maybeReadClient } maybeWriteClient = { maybeWriteClient } universe = { universe }/> }
 	] as const
 
 	useSignalEffect(() => {
