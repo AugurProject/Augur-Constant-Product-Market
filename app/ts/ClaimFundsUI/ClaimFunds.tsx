@@ -38,7 +38,7 @@ const DisplayShareData = ({ availaleShareData, selectedShares }: DisplayShareDat
 								else selectedShares.value.add(shareEntry.market)
 							} }
 						/>
-						<span><b>Market { shareEntry.market }</b>{ ': ' }{ shareEntry.payout > 0 ? `${ bigintToDecimalString(shareEntry.payout, 18n) } DAI` : 'CLAIMED' }</span>
+						<span><b>Market { shareEntry.market }</b>{ ': ' }{ shareEntry.payout > 0 ? `${ bigintToDecimalString(shareEntry.payout, 18n, 2) } DAI` : 'CLAIMED' }</span>
 					</label>
 				</span>
 				</>)
@@ -80,7 +80,7 @@ const DisplayDisputesData = ({ availableDisputes, selectedDisputes }: DisplayDis
 								} }
 							/>
 							<span><b>Market { disputeEntry.market }{ ': ' }</b>
-							{ ' -  ' }Bond { disputeEntry.bond }{ ': ' }{ disputeEntry.amount > 0 ? `${ bigintToDecimalString(disputeEntry.amount, 18n) } REP` : 'CLAIMED' }</span>
+							{ ' -  ' }Bond { disputeEntry.bond }{ ': ' }{ disputeEntry.amount > 0 ? `${ bigintToDecimalString(disputeEntry.amount, 18n, 2) } REP` : 'CLAIMED' }</span>
 						</label>
 					</span>
 				</>)
@@ -122,7 +122,7 @@ const ForkAndRedeemDisputeCrowdSourcers = ({ availableClaimsFromForkingDisputeCr
 								} }
 							/>
 							<span><b>Market { disputeEntry.market }{ ': ' }</b>
-							{ ' -  ' }Bond { disputeEntry.bond }{ ': ' }{ disputeEntry.amount > 0 ? `${ bigintToDecimalString(disputeEntry.amount, 18n) } REP` : 'CLAIMED' }</span>
+							{ ' -  ' }Bond { disputeEntry.bond }{ ': ' }{ disputeEntry.amount > 0 ? `${ bigintToDecimalString(disputeEntry.amount, 18n, 2) } REP` : 'CLAIMED' }</span>
 						</label>
 					</span>
 				</>)
@@ -164,7 +164,7 @@ const DisplayReportsData = ({ availableReports, selectedReports }: DisplayReport
 								} }
 							/>
 							<span><b>Market { initialReport.market }{ ': ' }</b>
-							{ ' -  ' } Bond { initialReport.bond }{ ': ' }{ initialReport.amount > 0 ? `${ bigintToDecimalString(initialReport.amount, 18n) } REP` : 'CLAIMED' }</span>
+							{ ' -  ' } Bond { initialReport.bond }{ ': ' }{ initialReport.amount > 0 ? `${ bigintToDecimalString(initialReport.amount, 18n, 2) } REP` : 'CLAIMED' }</span>
 						</label>
 					</span>
 				</>)

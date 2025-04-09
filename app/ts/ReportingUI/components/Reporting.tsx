@@ -1,5 +1,5 @@
 import { OptionalSignal, useOptionalSignal } from '../../utils/OptionalSignal.js'
-import { buyParticipationTokens, contributeToMarketDispute, contributeToMarketDisputeOnTentativeOutcome, disavowCrowdsourcers, doInitialReport, fetchHotLoadingCurrentDisputeWindowData, fetchHotLoadingMarketData, fetchHotLoadingTotalValidityBonds, finalizeMarket, getDisputeWindow, getDisputeWindowInfo, getForkValues, getPreemptiveDisputeCrowdsourcer, getReportingHistory, getStakeOfReportingParticipant, getStakesOnAllOutcomesOnYesNoMarketOrCategorical, getWinningPayoutNumerators, migrateThroughOneFork, ReportingHistoryElement } from '../../utils/augurContractUtils.js'
+import { buyParticipationTokens, contributeToMarketDispute, contributeToMarketDisputeOnTentativeOutcome, disavowCrowdsourcers, doInitialReport, fetchHotLoadingCurrentDisputeWindowData, fetchHotLoadingMarketData, finalizeMarket, getDisputeWindow, getDisputeWindowInfo, getForkValues, getPreemptiveDisputeCrowdsourcer, getReportingHistory, getStakeOfReportingParticipant, getStakesOnAllOutcomesOnYesNoMarketOrCategorical, getWinningPayoutNumerators, migrateThroughOneFork, ReportingHistoryElement } from '../../utils/augurContractUtils.js'
 import { addressString, areEqualArrays, bigintToDecimalString, decimalStringToBigint, formatUnixTimestampISO } from '../../utils/ethereumUtils.js'
 import { ExtraInfo } from '../../CreateMarketUI/types/createMarketTypes.js'
 import { MARKET_TYPES } from '../../utils/constants.js'
@@ -29,20 +29,8 @@ export const DisputeWindow = ({ disputeWindowData }: DisputeWindowProps) => {
 			<span><b>Dispute Window:</b>{ disputeWindowData.deepValue.disputeWindow }</span>
 			<span><b>Start Time:</b>{ formatUnixTimestampISO(disputeWindowData.deepValue.startTime) }</span>
 			<span><b>End Time:</b>{ formatUnixTimestampISO(disputeWindowData.deepValue.endTime) }</span>
-			<span><b>Fees:</b>{ bigintToDecimalString(disputeWindowData.deepValue.fees, 18n) } DAI</span>
+			<span><b>Fees:</b>{ bigintToDecimalString(disputeWindowData.deepValue.fees, 18n, 2) } DAI</span>
 			<span><b>Purchased:</b>{ disputeWindowData.deepValue.purchased } Participation Tokens</span>
-		</div>
-	</div>
-}
-
-interface ValidityBondProps {
-	totalValidityBondsForAMarket: OptionalSignal<bigint>
-}
-export const ValidityBond = ({ totalValidityBondsForAMarket }: ValidityBondProps) => {
-	if (totalValidityBondsForAMarket.deepValue === undefined) return <></>
-	return <div class = 'panel'>
-		<div style = 'display: grid'>
-			<span><b>Total Validity Bonds For A Market:</b>{ bigintToDecimalString(totalValidityBondsForAMarket.deepValue, 18n) } REP</span>
 		</div>
 	</div>
 }
@@ -163,8 +151,9 @@ export const DisplayStakes = ({ outcomeStakes, maybeWriteClient, marketData, dis
 			<SomeTimeAgo priorTimestamp = { endDate } countBackwards = { true } diffToText = {
 				(time: number) => {
 					if (disputeWindowInfo.deepValue === undefined) return <></>
-					if (time <= 0) return <>`The market has resolved to "${ winningOption.outcomeName }."`</>
-					return <>Resolving To "{ winningOption.outcomeName }" if not disputed in { humanReadableDateDelta(time) } ({ formatUnixTimestampISO(disputeWindowInfo.deepValue.endTime) }).</>
+					if (time <= 0) return <>The market has resolved to "<b>{ winningOption.outcomeName }</b>".</>
+					if (disputeWindowInfo.deepValue.isActive) return <>Resolving To "<b>{ winningOption.outcomeName }</b>" if not disputed in { humanReadableDateDelta(time) } ({ formatUnixTimestampISO(disputeWindowInfo.deepValue.endTime) }).</>
+					return <>Resolving To "<b>{ winningOption.outcomeName }</b>" if not disputed in the next dispute round.</>
 				}
 			}/>
 		</div>
@@ -173,16 +162,16 @@ export const DisplayStakes = ({ outcomeStakes, maybeWriteClient, marketData, dis
 	const TotalRepStaked = () => {
 		if (outcomeStakes.deepValue === undefined || forkValues.deepValue === undefined) return <></>
 		return <div style = 'display: grid; margin-top: 1rem'>
-			<span><b>Total Rep staked on the market:</b>{ ' ' }{ bigintToDecimalString(outcomeStakes.deepValue.reduce((current, prev) => prev.repStake + current, 0n), 18n) } REP</span>
-			<span><b>Entering Slow Reporting after:</b>{ ' ' }{ bigintToDecimalString(forkValues.deepValue.disputeThresholdForDisputePacing, 18n) } REP is staked within one round</span>
-			<span><b>Forking Augur after:</b>{ ' ' }{ bigintToDecimalString(forkValues.deepValue.disputeThresholdForFork, 18n) } REP is staked within one round</span>
+			<span><b>Total Rep staked:</b>{ ' ' }{ bigintToDecimalString(outcomeStakes.deepValue.reduce((current, prev) => prev.repStake + current, 0n), 18n, 2) } REP</span>
+			<span><b>Entering Slow Reporting after:</b>{ ' ' }{ bigintToDecimalString(forkValues.deepValue.disputeThresholdForDisputePacing, 18n, 2) } REP is staked within one round</span>
+			<span><b>Forking Augur after:</b>{ ' ' }{ bigintToDecimalString(forkValues.deepValue.disputeThresholdForFork, 18n, 2) } REP is staked within one round</span>
 		</div>
 	}
 
 	return (
 		<div class = 'panel'>
 			<div style = 'display: grid'>
-				<span><b>Market REP Stakes:</b></span>
+				<span><b>Market Reporting:</b></span>
 				<MarketReportingOptions outcomeStakes = { outcomeStakes } selectedOutcome = { selectedOutcome } preemptiveDisputeCrowdsourcerStake = { preemptiveDisputeCrowdsourcerStake }/>
 				<TotalRepStaked/>
 				<ResolvingTo/>
@@ -249,10 +238,10 @@ export const DisplayForkValues = ({ forkValues }: GetForkValuesProps) => {
 	return <div class = 'panel'>
 		<span><b>Fork Values</b></span>
 		<div style = 'display: grid'>
-			<span><b>Initial Report Min Value:</b>{ bigintToDecimalString(forkValues.deepValue.initialReportMinValue, 18n) } REP</span>
-			<span><b>Dispute Threshold For Dispute Pacing (one round):</b>{ bigintToDecimalString(forkValues.deepValue.disputeThresholdForDisputePacing, 18n) } REP</span>
-			<span><b>Dispute Threshold For Fork (one round):</b>{ bigintToDecimalString(forkValues.deepValue.disputeThresholdForFork, 18n) } REP</span>
-			<span><b>Fork Reputation Goal:</b>{ bigintToDecimalString(forkValues.deepValue.forkReputationGoal, 18n) } REP</span>
+			<span><b>Initial Report Min Value:</b>{ bigintToDecimalString(forkValues.deepValue.initialReportMinValue, 18n, 2) } REP</span>
+			<span><b>Dispute Threshold For Dispute Pacing (one round):</b>{ bigintToDecimalString(forkValues.deepValue.disputeThresholdForDisputePacing, 18n, 2) } REP</span>
+			<span><b>Dispute Threshold For Fork (one round):</b>{ bigintToDecimalString(forkValues.deepValue.disputeThresholdForFork, 18n, 2) } REP</span>
+			<span><b>Fork Reputation Goal:</b>{ bigintToDecimalString(forkValues.deepValue.forkReputationGoal, 18n, 2) } REP</span>
 		</div>
 	</div>
 }
@@ -275,7 +264,7 @@ export const ReportingHistory = ({ reportingHistory, marketData }: ReportingHist
 				if (marketType === undefined) throw new Error(`Invalid market type Id: ${ marketData.deepValue.hotLoadingMarketData.marketType }`)
 				const payoutIndex = allPayoutNumerators.findIndex((option) => areEqualArrays(option, round.payoutNumerators))
 				const outcomeName = getOutcomeName(payoutIndex, marketType, marketData.deepValue.hotLoadingMarketData.outcomes || [])
-				return <span><b>Round { ' ' }{ round.round }</b>{ ': ' }{ outcomeName }{ ' ' }for{ ' ' }{ bigintToDecimalString(round.stake, 18n) }{ ' ' }REP</span>
+				return <span><b>Round { ' ' }{ round.round }</b>{ ': ' }{ outcomeName }{ ' ' }for{ ' ' }{ bigintToDecimalString(round.stake, 18n, 2) }{ ' ' }REP</span>
 			})}
 		</div>
 	</div>
@@ -292,7 +281,6 @@ export const Reporting = ({ maybeReadClient, maybeWriteClient, universe, reputat
 	const marketAddressString = useSignal<string>('')
 	const marketData = useOptionalSignal<MarketData>(undefined)
 	const disputeWindowData = useOptionalSignal<DisputeWindowData>(undefined)
-	const totalValidityBondsForAMarket = useOptionalSignal<bigint>(undefined)
 	const outcomeStakes = useOptionalSignal<readonly OutcomeStake[]>(undefined)
 	const disputeWindowAddress = useOptionalSignal<AccountAddress>(undefined)
 	const disputeWindowInfo = useOptionalSignal<Awaited<ReturnType<typeof getDisputeWindowInfo>>>(undefined)
@@ -315,7 +303,6 @@ export const Reporting = ({ maybeReadClient, maybeWriteClient, universe, reputat
 		if (reputationTokenAddress.deepValue === undefined) throw new Error('missing reputationTokenAddress')
 		marketData.deepValue = undefined
 		disputeWindowData.deepValue = undefined
-		totalValidityBondsForAMarket.deepValue = undefined
 		outcomeStakes.deepValue = undefined
 		disputeWindowAddress.deepValue = undefined
 		disputeWindowInfo.deepValue = undefined
@@ -332,7 +319,6 @@ export const Reporting = ({ maybeReadClient, maybeWriteClient, universe, reputat
 		marketData.deepValue = { marketAddress: parsedMarketAddressString, parsedExtraInfo, hotLoadingMarketData: newMarketData }
 		const currentMarketData = marketData.deepValue
 		disputeWindowData.deepValue = await fetchHotLoadingCurrentDisputeWindowData(readClient, currentMarketData.hotLoadingMarketData.universe)
-		totalValidityBondsForAMarket.deepValue = await fetchHotLoadingTotalValidityBonds(readClient, [parsedMarketAddressString])
 		if (MARKET_TYPES[currentMarketData.hotLoadingMarketData.marketType] === 'Yes/No' || MARKET_TYPES[currentMarketData.hotLoadingMarketData.marketType] === 'Categorical') {
 			const allPayoutNumerators = getAllPayoutNumeratorCombinations(marketData.deepValue.hotLoadingMarketData.numOutcomes, marketData.deepValue.hotLoadingMarketData.numTicks)
 			const winningOption = await getWinningPayoutNumerators(readClient, parsedMarketAddressString)
@@ -399,7 +385,6 @@ export const Reporting = ({ maybeReadClient, maybeWriteClient, universe, reputat
 			<button class = 'button is-primary' onClick = { fetchMarketData }>Fetch Market Information</button>
 			<Market marketData = { marketData } universe = { universe }/>
 			<DisputeWindow disputeWindowData = { disputeWindowData }/>
-			<ValidityBond totalValidityBondsForAMarket = { totalValidityBondsForAMarket }/>
 			<button class = 'button is-primary' onClick = { buyParticipationTokensButton }>Buy 10 Particiption Tokens</button>
 			<DisplayStakes outcomeStakes = { outcomeStakes } marketData = { marketData } maybeWriteClient = { maybeWriteClient } preemptiveDisputeCrowdsourcerStake = { preemptiveDisputeCrowdsourcerStake } disputeWindowInfo = { disputeWindowInfo } forkValues = { forkValues }/>
 			<DisplayDisputeWindow disputeWindowAddress = { disputeWindowAddress } disputeWindowInfo = { disputeWindowInfo }/>

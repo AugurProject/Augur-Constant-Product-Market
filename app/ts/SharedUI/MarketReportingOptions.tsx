@@ -23,20 +23,38 @@ export const MarketReportingOptions = ({ outcomeStakes, selectedOutcome, preempt
 	const requiredState = (allStake: bigint, stakeInOutcome: bigint) => (2n * allStake) - (3n * stakeInOutcome)
 
 	const totalStake = outcomeStakes.deepValue.reduce((current, prev) => prev.repStake + current, 0n)
-	return outcomeStakes.deepValue.map((outcomeStake) => (
-		<span key = { outcomeStake.outcomeName }>
-			<label>
+
+	if (totalStake === 0n) { // initial reporting
+		return <div style = { { display: 'grid', gridTemplateColumns: 'max-content max-content', gap: '0.5rem', alignItems: 'center' } }> {
+			outcomeStakes.deepValue.map((outcomeStake) => <>
 				<input
 					type = 'radio'
 					name = 'selectedOutcome'
 					checked = { selectedOutcome.value === outcomeStake.outcomeName }
 					onChange = { () => { selectedOutcome.value = outcomeStake.outcomeName } }
 				/>
-				{' '}
-				{ outcomeStake.outcomeName } ({ outcomeStake.status }): { bigintToDecimalString(outcomeStake.repStake, 18n) } REP. { outcomeStake.status === 'Winning' ? `Prestaked: ${ bigintToDecimalString(preemptiveDisputeCrowdsourcerStake.deepValue || 0n, 18n) } REP` : `Required for Dispute: ${ bigintToDecimalString(requiredState(totalStake, outcomeStake.repStake), 18n) } REP` }
-			</label>
-		</span>
-	))
+			<span>{ outcomeStake.outcomeName }</span>
+			</>)
+		} </div>
+	}
+	return <div style = { { display: 'grid', gridTemplateColumns: 'max-content max-content max-content max-content', gap: '0.5rem', alignItems: 'center' } }> {
+		outcomeStakes.deepValue.map((outcomeStake) => <>
+			<input
+				type = 'radio'
+				name = 'selectedOutcome'
+				checked = { selectedOutcome.value === outcomeStake.outcomeName }
+				onChange = { () => { selectedOutcome.value = outcomeStake.outcomeName } }
+			/>
+			<span>{ outcomeStake.outcomeName } ({ outcomeStake.status })</span>
+			<span>{ bigintToDecimalString(outcomeStake.repStake, 18n, 2) } REP</span>
+			<span>
+				{ outcomeStake.status === 'Winning'
+					? `Prestaked: ${ bigintToDecimalString(preemptiveDisputeCrowdsourcerStake.deepValue || 0n, 18n, 2) } REP`
+					: `Required for Dispute: ${ bigintToDecimalString(requiredState(totalStake, outcomeStake.repStake), 18n, 2) } REP`
+				}
+			</span>
+		</>)
+	} </div>
 }
 
 export type MarketOutcomeOption = {

@@ -60,14 +60,15 @@ export function decimalStringToBigint(value: string, power: bigint): bigint {
 	return BigInt(`${ integerPart }${ fractionalPart }`)
 }
 
-export function bigintToDecimalString(value: bigint, power: bigint): string {
-	const integerPart = value / 10n**power
-	const fractionalPart = value % 10n**power
-	if (fractionalPart === 0n) {
-		return integerPart.toString(10)
-	} else {
-		return `${integerPart.toString(10)}.${fractionalPart.toString(10).padStart(Number(power), '0').replace(/0+$/, '')}`
-	}
+export function bigintToDecimalString(value: bigint, power: bigint, maxDecimals?: number): string {
+	const integerPart = value / 10n ** power
+	const fractionalPart = value % 10n ** power
+	if (fractionalPart === 0n) return integerPart.toString(10)
+	const rawFractionalStr = fractionalPart.toString(10).padStart(Number(power), '0')
+	const trimmedFractionalStr = maxDecimals !== undefined ? rawFractionalStr.slice(0, maxDecimals) : rawFractionalStr
+	const finalFractionalStr = trimmedFractionalStr.replace(/0+$/, '')
+	if (finalFractionalStr === '') return integerPart.toString(10)
+	return `${ integerPart.toString(10) }.${ finalFractionalStr }`
 }
 
 export function isSameAddress(address1: `0x${ string }` | undefined, address2: `0x${ string }` | undefined) {
