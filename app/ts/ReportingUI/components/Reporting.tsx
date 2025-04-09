@@ -206,22 +206,6 @@ export const DisplayDisputeWindow = ({ disputeWindowAddress, disputeWindowInfo }
 	</div>
 }
 
-interface GetForkValuesProps {
-	forkValues: OptionalSignal<Awaited<ReturnType<typeof getForkValues>>>
-}
-export const DisplayForkValues = ({ forkValues }: GetForkValuesProps) => {
-	if (forkValues.deepValue === undefined) return <></>
-	return <div class = 'panel'>
-		<span><b>Fork Values</b></span>
-		<div style = 'display: grid'>
-			<span><b>Initial Report Min Value:</b>{ bigintToDecimalString(forkValues.deepValue.initialReportMinValue, 18n, 2) } REP</span>
-			<span><b>Dispute Threshold For Dispute Pacing (one round):</b>{ bigintToDecimalString(forkValues.deepValue.disputeThresholdForDisputePacing, 18n, 2) } REP</span>
-			<span><b>Dispute Threshold For Fork (one round):</b>{ bigintToDecimalString(forkValues.deepValue.disputeThresholdForFork, 18n, 2) } REP</span>
-			<span><b>Fork Reputation Goal:</b>{ bigintToDecimalString(forkValues.deepValue.forkReputationGoal, 18n, 2) } REP</span>
-		</div>
-	</div>
-}
-
 interface ReportingHistoryProps {
 	reportingHistory: OptionalSignal<readonly ReportingHistoryElement[]>
 	marketData: OptionalSignal<MarketData>
@@ -352,7 +336,6 @@ export const Reporting = ({ maybeReadClient, maybeWriteClient, universe, reputat
 			<Market marketData = { marketData } universe = { universe }/>
 			<DisplayStakes outcomeStakes = { outcomeStakes } marketData = { marketData } maybeWriteClient = { maybeWriteClient } preemptiveDisputeCrowdsourcerStake = { preemptiveDisputeCrowdsourcerStake } disputeWindowInfo = { disputeWindowInfo } forkValues = { forkValues }/>
 			<DisplayDisputeWindow disputeWindowAddress = { disputeWindowAddress } disputeWindowInfo = { disputeWindowInfo }/>
-			<DisplayForkValues forkValues = { forkValues }/>
 			<ReportingHistory marketData = { marketData } reportingHistory = { reportingHistory }/>
 			<button class = 'button is-primary' onClick = { finalizeMarketButton }>Finalize Market</button>
 			<ForkMigration marketData = { marketData } maybeWriteClient = { maybeWriteClient } outcomeStakes = { outcomeStakes }/>

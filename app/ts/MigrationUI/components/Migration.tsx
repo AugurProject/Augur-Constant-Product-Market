@@ -1,6 +1,6 @@
 import { OptionalSignal, useOptionalSignal } from '../../utils/OptionalSignal.js'
 import { AccountAddress, EthereumQuantity } from '../../types/types.js'
-import { fetchHotLoadingMarketData, getChildUniverse, getParentUniverse, getUniverseForkingInformation, migrateFromRepV1toRepV2GenesisToken, migrateReputationToChildUniverseByPayout } from '../../utils/augurContractUtils.js'
+import { fetchHotLoadingMarketData, getChildUniverse, getForkValues, getParentUniverse, getUniverseForkingInformation, migrateFromRepV1toRepV2GenesisToken, migrateReputationToChildUniverseByPayout } from '../../utils/augurContractUtils.js'
 import { approveErc20Token, getErc20TokenBalance } from '../../utils/erc20.js'
 import { MARKET_TYPES, REPUTATION_V1_TOKEN_ADDRESS } from '../../utils/constants.js'
 import { getOutcomeNamesAndNumeratorCombinationsForMarket, getUniverseName, getUniverseUrl, isGenesisUniverse } from '../../utils/augurUtils.js'
@@ -20,6 +20,20 @@ interface MigrationProps {
 	pathSignal: Signal<string>
 }
 
+interface GetForkValuesProps {
+	forkValues: OptionalSignal<Awaited<ReturnType<typeof getForkValues>>>
+}
+// todo modify this to show this with the current rep in different universes and not just the goal
+export const DisplayForkValues = ({ forkValues }: GetForkValuesProps) => {
+	if (forkValues.deepValue === undefined) return <></>
+	return <div class = 'panel'>
+		<span><b>Fork Values</b></span>
+		<div style = 'display: grid'>
+			<span><b>Fork Reputation Goal (rep required for universe to win):</b>{ bigintToDecimalString(forkValues.deepValue.forkReputationGoal, 18n, 2) } REP</span>
+		</div>
+	</div>
+}
+
 const GENESIS_REPUTATION_V2_TOKEN_ADDRESS = '0x221657776846890989a759BA2973e427DfF5C9bB'
 
 export const Migration = ({ maybeReadClient, maybeWriteClient, reputationTokenAddress, universe, universeForkingInformation, pathSignal }: MigrationProps) => {
@@ -34,6 +48,7 @@ export const Migration = ({ maybeReadClient, maybeWriteClient, reputationTokenAd
 	const childUniverseAddress = useOptionalSignal<AccountAddress>(undefined)
 	const childUniverseUrl = useComputed(() => childUniverseAddress.deepValue === undefined ? '' : getUniverseUrl(childUniverseAddress.deepValue, 'migration'))
 	const parentUniverseUrl = useComputed(() => parentUniverse.deepValue === undefined ? '' : getUniverseUrl(parentUniverse.deepValue, 'migration'))
+	const forkValues = useOptionalSignal<Awaited<ReturnType<typeof getForkValues>>>(undefined)
 
 	const getParsedExtraInfo = (extraInfo: string) => {
 		try {
@@ -64,6 +79,7 @@ export const Migration = ({ maybeReadClient, maybeWriteClient, reputationTokenAd
 			const marketType = MARKET_TYPES[forkingMarketData.deepValue.hotLoadingMarketData.marketType]
 			if (marketType === undefined) throw new Error('invalid marketType')
 			forkingoutcomeStakes.deepValue = getOutcomeNamesAndNumeratorCombinationsForMarket(marketType, forkingMarketData.deepValue.hotLoadingMarketData.numOutcomes, forkingMarketData.deepValue.hotLoadingMarketData.numTicks, forkingMarketData.deepValue.hotLoadingMarketData.outcomes)
+			forkValues.deepValue = await getForkValues(readClient, reputationTokenAddress.deepValue)
 		}
 	}
 
@@ -128,6 +144,7 @@ export const Migration = ({ maybeReadClient, maybeWriteClient, reputationTokenAd
 			<div class = 'panel'>
 				<Market marketData = { forkingMarketData } universe = { universe }/>
 				<MarketReportingWithoutStake outcomeStakes = { forkingoutcomeStakes } selectedOutcome = { selectedOutcome }/>
+				<DisplayForkValues forkValues = { forkValues }/>
 				<p> Child universe address: <a href = '#' onClick = { (event) => { event.preventDefault(); pathSignal.value = childUniverseUrl.value } }> { childUniverseAddress.value }</a></p>
 				<div style = 'margin-top: 0.5rem'>
 					<label>
