@@ -1,6 +1,7 @@
 import { useEffect } from 'preact/hooks'
 import { useComputed, useSignal } from '@preact/signals'
 import { JSX } from 'preact'
+import { humanReadableDateDelta } from '../../utils/utils.js'
 
 interface SomeTimeAgoProps {
 	priorTimestamp: Date,
@@ -19,12 +20,4 @@ export function SomeTimeAgo(props: SomeTimeAgoProps) {
 	})
 	useEffect(() => { timeDiff.value = getTimeDiff() }, [props.priorTimestamp])
 	return <>{ humanReadableTimeDiff.value }</>
-}
-
-export function humanReadableDateDelta(secondsDiff: number) {
-	if (secondsDiff <= 0) return '0 seconds'
-	if (secondsDiff > 3600 * 24 * 1.5) return `${ Math.floor((secondsDiff + 1800) / 3600 / 24) } days`
-	if (secondsDiff > 3600 * 1.5) return `${ Math.floor((secondsDiff + 1800) / 3600) } hours`
-	if (secondsDiff > 60 * 1.5) return `${ Math.floor((secondsDiff + 30) / 60) } minutes`
-	return `${ Math.floor(secondsDiff + 0.5) } seconds`
 }

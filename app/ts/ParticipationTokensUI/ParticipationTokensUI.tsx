@@ -1,8 +1,8 @@
-import { AccountAddress } from '../../types/types.js'
-import { buyParticipationTokens, fetchHotLoadingCurrentDisputeWindowData } from '../../utils/augurContractUtils.js'
-import { bigintToDecimalString, formatUnixTimestampISO } from '../../utils/ethereumUtils.js'
-import { ReadClient, WriteClient } from '../../utils/ethereumWallet.js'
-import { OptionalSignal, useOptionalSignal } from '../../utils/OptionalSignal.js'
+import { AccountAddress } from '../types/types.js'
+import { buyParticipationTokens, fetchHotLoadingCurrentDisputeWindowData } from '../utils/augurContractUtils.js'
+import { bigintToDecimalString, formatUnixTimestampISO } from '../utils/ethereumUtils.js'
+import { ReadClient, WriteClient } from '../utils/ethereumWallet.js'
+import { OptionalSignal, useOptionalSignal } from '../utils/OptionalSignal.js'
 
 type DisputeWindowData = {
 	disputeWindow: `0x${ string }`
