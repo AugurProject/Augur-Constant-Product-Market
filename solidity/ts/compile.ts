@@ -24,6 +24,8 @@ async function exists(path: string) {
 
 const contractList = [
 	'AugurConstantProductMarket.sol',
+	'AugurConstantProductMarketRouter.sol',
+	'IAugurConstantProduct.sol',
 	'Context.sol',
 	'draft-IERC6093.sol',
 	'ERC20.sol',
