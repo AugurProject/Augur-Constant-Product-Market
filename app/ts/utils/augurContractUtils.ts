@@ -245,11 +245,41 @@ export type ReportingHistoryElement = {
 	participantAddress: AccountAddress,
 	payoutNumerators: readonly bigint[],
 	stake: bigint
+	size: bigint
+	type: 'Preemptive' | 'Completed'
+}
+
+export const getCrowdsourcerInfo = async (readClient: ReadClient, participantAddress: AccountAddress) => {
+	const payoutNumerators = await readClient.readContract({
+		abi: REPORTING_PARTICIPANT_ABI,
+		functionName: 'getPayoutNumerators',
+		address: participantAddress,
+		args: []
+	})
+	const stake = await readClient.readContract({
+		abi: REPORTING_PARTICIPANT_ABI,
+		functionName: 'getStake',
+		address: participantAddress,
+		args: []
+	})
+	const size = await readClient.readContract({
+		abi: REPORTING_PARTICIPANT_ABI,
+		functionName: 'getSize',
+		address: participantAddress,
+		args: []
+	})
+	return {
+		participantAddress,
+		payoutNumerators,
+		stake,
+		size
+	}
 }
 
 export const getReportingHistory = async(readClient: ReadClient, market: AccountAddress, currentRound: bigint) => {
 	// loop over all (intentionally sequential not to spam)
 	const result: ReportingHistoryElement[] = []
+
 	for (let round = 0n; round <= currentRound; round++) {
 		const participantAddress = await readClient.readContract({
 			abi: MARKET_ABI,
@@ -257,26 +287,54 @@ export const getReportingHistory = async(readClient: ReadClient, market: Account
 			address: market,
 			args: [round]
 		})
-		const payoutNumerators = await readClient.readContract({
-			abi: REPORTING_PARTICIPANT_ABI,
-			functionName: 'getPayoutNumerators',
-			address: participantAddress,
-			args: []
-		})
-		const stake = await readClient.readContract({
-			abi: REPORTING_PARTICIPANT_ABI,
-			functionName: 'getStake',
-			address: participantAddress,
-			args: []
-		})
 		result.push({
 			round,
-			participantAddress,
-			payoutNumerators,
-			stake
+			type: 'Completed' as const,
+			...await getCrowdsourcerInfo(readClient, participantAddress)
+		})
+	}
+	const preemptiveDisputeCrowdsourcer = await readClient.readContract({
+		abi: MARKET_ABI,
+		functionName: 'preemptiveDisputeCrowdsourcer',
+		address: market,
+		args: []
+	})
+	if (BigInt(preemptiveDisputeCrowdsourcer) !== 0n) {
+		result.push({
+			round: currentRound + 2n,
+			type: 'Preemptive' as const,
+			...await getCrowdsourcerInfo(readClient, preemptiveDisputeCrowdsourcer)
 		})
 	}
 	return result
+}
+
+export const getLastCompletedCrowdSourcerSize = async(readClient: ReadClient, market: AccountAddress, currentRound: bigint) => {
+	const participantAddress = await readClient.readContract({
+		abi: MARKET_ABI,
+		functionName: 'participants',
+		address: market,
+		args: [currentRound]
+	})
+	if (BigInt(participantAddress) === 0n) return 0n
+	return (await getCrowdsourcerInfo(readClient, participantAddress)).size
+}
+
+export const getCrowdsourcerInfoByPayoutNumerator = async (readClient: ReadClient, market: AccountAddress, payoutDistributionHash: bigint) => {
+	const crowdsourcer = await readClient.readContract({
+		abi: MARKET_ABI,
+		functionName: 'getCrowdsourcer',
+		address: market,
+		args: [bytes32String(payoutDistributionHash)]
+	})
+	if (BigInt(crowdsourcer) === 0n) return undefined
+	return await getCrowdsourcerInfo(readClient, crowdsourcer)
+}
+
+export const getAlreadyContributedCrowdSourcerInfoOnAllOutcomesOnYesNoMarketOrCategorical = async (readClient: ReadClient, market: AccountAddress, numOutcomes: bigint, numTicks: EthereumQuantity) => {
+	const allPayoutNumeratorCombinations = getAllPayoutNumeratorCombinations(numOutcomes, numTicks)
+	const payoutDistributionHashes = allPayoutNumeratorCombinations.map((payoutNumerators) => EthereumQuantity.parse(derivePayoutDistributionHash(payoutNumerators, numTicks, numOutcomes)))
+	return await Promise.all(payoutDistributionHashes.map((payoutDistributionHash) => getCrowdsourcerInfoByPayoutNumerator(readClient, market, payoutDistributionHash)))
 }
 
 export const redeemStake = async (writeClient: WriteClient, reportingParticipants: readonly AccountAddress[], disputeWindows: readonly AccountAddress[]) => {

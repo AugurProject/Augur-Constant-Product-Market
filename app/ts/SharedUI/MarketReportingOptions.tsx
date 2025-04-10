@@ -1,6 +1,6 @@
 import { Signal } from '@preact/signals'
 import { OptionalSignal } from '../utils/OptionalSignal.js'
-import { EthereumQuantity } from '../types/types.js'
+import { AccountAddress, EthereumQuantity } from '../types/types.js'
 import { bigintToDecimalString } from '../utils/ethereumUtils.js'
 
 export type OutcomeStake = {
@@ -8,6 +8,12 @@ export type OutcomeStake = {
 	repStake: bigint
 	status: 'Winning' | 'Losing'
 	payoutNumerators: EthereumQuantity[]
+	alreadyContributedToOutcome: undefined | {
+		participantAddress: AccountAddress
+		payoutNumerators: readonly bigint[]
+		stake: bigint
+		size: bigint
+	}
 }
 
 type MarketReportingOptionsProps = {
@@ -37,7 +43,7 @@ export const MarketReportingOptions = ({ outcomeStakes, selectedOutcome, preempt
 			</>)
 		} </div>
 	}
-	return <div style = { { display: 'grid', gridTemplateColumns: 'max-content max-content max-content max-content', gap: '0.5rem', alignItems: 'center' } }> {
+	return <div style = { { display: 'grid', gridTemplateColumns: 'max-content max-content max-content max-content max-content', gap: '0.5rem', alignItems: 'center' } }> {
 		outcomeStakes.deepValue.map((outcomeStake) => <>
 			<input
 				type = 'radio'
@@ -52,6 +58,11 @@ export const MarketReportingOptions = ({ outcomeStakes, selectedOutcome, preempt
 					? `Prestaked: ${ bigintToDecimalString(preemptiveDisputeCrowdsourcerStake.deepValue || 0n, 18n, 2) } REP`
 					: `Required for Dispute: ${ bigintToDecimalString(requiredState(totalStake, outcomeStake.repStake), 18n, 2) } REP`
 				}
+			</span>
+			<span>
+				{ outcomeStake.alreadyContributedToOutcome === undefined ? <></> : <>
+				(Already contributed: { bigintToDecimalString(outcomeStake.alreadyContributedToOutcome.stake, 18n, 2) } REP / { bigintToDecimalString(requiredState(totalStake, outcomeStake.repStake), 18n, 2) } REP)
+				</> }
 			</span>
 		</>)
 	} </div>

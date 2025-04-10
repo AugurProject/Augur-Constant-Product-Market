@@ -6,6 +6,7 @@ import { AUGUR_CONTRACT, DAI_TOKEN_ADDRESS } from '../../utils/constants.js'
 import { addressString, decimalStringToBigint, formatUnixTimestampISO, isDecimalString } from '../../utils/ethereumUtils.js'
 import { approveErc20Token } from '../../utils/erc20.js'
 import { ReadClient, WriteClient } from '../../utils/ethereumWallet.js'
+import { dateToBigintSeconds } from '../../utils/utils.js'
 
 interface CreateYesNoMarketProps {
 	maybeReadClient: OptionalSignal<ReadClient>
@@ -62,7 +63,7 @@ export const CreateYesNoMarket = ({ maybeReadClient, maybeWriteClient, universe,
 		const parsedAffiliateFeeDivisor = NonHexBigInt.safeParse(affiliateFeeDivisor.value)
 		const parsedDesignatedReporterAddress = EthereumQuantity.safeParse(designatedReporterAddress.value)
 		if (!isValidDate(endTime.value)) throw new Error('missing endTime')
-		const marketEndTimeUnixTimeStamp = BigInt(Math.floor(new Date(endTime.value).getTime() / 1000))
+		const marketEndTimeUnixTimeStamp = dateToBigintSeconds(new Date(endTime.value))
 		if (!parsedAffiliateValidator.success) throw new Error('missing affiliateValidator')
 		if (!parsedAffiliateFeeDivisor.success) throw new Error('missing affiliateFeeDivisor')
 		if (!parsedDesignatedReporterAddress.success) throw new Error('missing designatedReporterAddress')

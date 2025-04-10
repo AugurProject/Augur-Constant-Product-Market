@@ -14,10 +14,11 @@ import { DAI_TOKEN_ADDRESS, DEFAULT_UNIVERSE } from './utils/constants.js'
 import { addressString, bigintToDecimalString, formatUnixTimestampISO, getEthereumBalance } from './utils/ethereumUtils.js'
 import { getUniverseName } from './utils/augurUtils.js'
 import { getReputationTokenForUniverse, getUniverseForkingInformation, isKnownUniverse } from './utils/augurContractUtils.js'
-import { humanReadableDateDelta, SomeTimeAgo } from './ReportingUI/components/SomeTimeAgo.js'
+import { SomeTimeAgo } from './ReportingUI/components/SomeTimeAgo.js'
 import { Migration } from './MigrationUI/components/Migration.js'
 import { getErc20TokenBalance } from './utils/erc20.js'
-import { ParticipationTokens } from './ABI/ParticipationTokensUI/ParticipationTokensUI.js'
+import { ParticipationTokens } from './ParticipationTokensUI/ParticipationTokensUI.js'
+import { bigintSecondsToDate, humanReadableDateDelta } from './utils/utils.js'
 
 interface UniverseComponentProps {
 	universe: OptionalSignal<AccountAddress>
@@ -35,7 +36,7 @@ interface UniverseForkingNoticeProps {
 
 const UniverseForkingNotice = ({ universeForkingInformation }: UniverseForkingNoticeProps) => {
 	if (universeForkingInformation.deepValue !== undefined && universeForkingInformation.deepValue.isForking) {
-		const forkingEndTime = new Date(Number(universeForkingInformation.deepValue.forkEndTime) * 1000)
+		const forkingEndTime = bigintSecondsToDate(universeForkingInformation.deepValue.forkEndTime)
 		return <div style = 'padding: 10px; background-color: red;'>
 			<p>
 				<SomeTimeAgo priorTimestamp = { forkingEndTime } countBackwards = { true } diffToText = {
