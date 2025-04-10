@@ -309,15 +309,15 @@ export const getReportingHistory = async(readClient: ReadClient, market: Account
 	return result
 }
 
-export const getLastCompletedCrowdSourcerSize = async(readClient: ReadClient, market: AccountAddress, currentRound: bigint) => {
+export const getLastCompletedCrowdSourcer = async(readClient: ReadClient, market: AccountAddress, currentRound: bigint) => {
 	const participantAddress = await readClient.readContract({
 		abi: MARKET_ABI,
 		functionName: 'participants',
 		address: market,
 		args: [currentRound]
 	})
-	if (BigInt(participantAddress) === 0n) return 0n
-	return (await getCrowdsourcerInfo(readClient, participantAddress)).size
+	if (BigInt(participantAddress) === 0n) return undefined
+	return await getCrowdsourcerInfo(readClient, participantAddress)
 }
 
 export const getCrowdsourcerInfoByPayoutNumerator = async (readClient: ReadClient, market: AccountAddress, payoutDistributionHash: bigint) => {
