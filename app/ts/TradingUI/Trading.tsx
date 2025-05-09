@@ -16,6 +16,7 @@ import { BigInputBox } from '../SharedUI/BigInputBox.js'
 import { getAugurConstantProductMarketRouterAddress, isAugurConstantProductMarketRouterDeployed } from '../utils/augurDeployment.js'
 import { min } from '../utils/utils.js'
 import { ShareBalances } from '../SharedUI/ShareBalances.js'
+import { useEffect } from 'preact/hooks'
 
 interface TradingViewProps {
 	maybeReadClient: OptionalSignal<ReadClient>
@@ -57,16 +58,59 @@ const TradingView = ({ maybeReadClient, maybeWriteClient, marketData, currentTim
 		}
 	})
 
-	const refresh = async () => {
+	const updateSharesOut = async (daiInput: bigint) => {
 		if (maybeWriteClient.deepValue === undefined) return
 		if (maybeReadClient.deepValue === undefined) return
+		if (marketData.deepValue === undefined) return
+		const baseSharesExpected = daiInput / marketData.deepValue.numTicks
+		const expectedSwapShares = await expectedSharesAfterSwap(maybeReadClient.deepValue, marketData.deepValue.marketAddress, yesSelected.value === 'No', baseSharesExpected)
+		expectedSharesOut.deepValue = baseSharesExpected + expectedSwapShares
+	}
+
+	useSignalEffect(() => {
+		if (maybeWriteClient.deepValue === undefined) return
+		if (maybeReadClient.deepValue === undefined) return
+		if (marketData.deepValue === undefined) return
+
+		if (buySelected.value === 'Buy') {
+			if (daiInputAmountToBuy.deepValue === undefined) return
+			// TODO, fix race conditions
+			updateSharesOut(daiInputAmountToBuy.deepValue)
+		} else {
+			if (yesSelected.value === 'Yes') {
+				console.error('TODO: not implemented')
+			} else {
+				console.error('TODO: not implemented')
+			}
+		}
+	})
+
+	const updateShareBalances = async () => {
+		if (maybeWriteClient.deepValue === undefined) return
 		if (marketData.deepValue === undefined) return
 		const shareBalances = await getShareBalances(maybeWriteClient.deepValue, marketData.deepValue.marketAddress, maybeWriteClient.deepValue.account.address)
 		invalidBalance.deepValue = shareBalances[0]
 		noBalance.deepValue = shareBalances[1]
 		yesBalance.deepValue = shareBalances[2]
+	}
 
-		if (invalidBalance.deepValue === undefined) throw new Error('invalid balance was undefined')
+	useEffect(() => {
+		updateShareBalances()
+	}, [])
+
+	useSignalEffect(() => {
+		maybeWriteClient.deepValue
+		maybeReadClient.deepValue
+		marketData.deepValue
+		invalidBalance.deepValue
+		updateCanExits()
+	})
+
+	const updateCanExits = async () => {
+		if (maybeWriteClient.deepValue === undefined) return
+		if (maybeReadClient.deepValue === undefined) return
+		if (marketData.deepValue === undefined) return
+		if (invalidBalance.deepValue === undefined) return
 		if (invalidBalance.deepValue > 4n) {
 			canExitNoShareAmount.deepValue = undefined
 			canExitNoExpectedDai.deepValue = undefined
@@ -97,19 +141,6 @@ const TradingView = ({ maybeReadClient, maybeWriteClient, marketData, currentTim
 			canExitNoExpectedDai.deepValue = 0n
 			canExitYesShareAmount.deepValue = 0n
 			canExitYesExpectedDai.deepValue = 0n
-		}
-
-		if (daiInputAmountToBuy.deepValue === undefined) return
-		if (buySelected.value === 'Buy') {
-			const baseSharesExpected = daiInputAmountToBuy.deepValue / marketData.deepValue.numTicks
-			const expectedSwapShares = await expectedSharesAfterSwap(maybeReadClient.deepValue, marketData.deepValue.marketAddress, yesSelected.value === 'No', baseSharesExpected)
-			expectedSharesOut.deepValue = baseSharesExpected + expectedSwapShares
-		} else {
-			if (yesSelected.value === 'Yes') {
-				throw new Error('TODO: not implemented')
-			} else {
-				throw new Error('TODO: not implemented')
-			}
 		}
 	}
 
@@ -231,7 +262,6 @@ const TradingView = ({ maybeReadClient, maybeWriteClient, marketData, currentTim
 		<section>
 			<button class = 'button button-primary' style = { { width: '100%' } } onClick = { execute }>{ buttonName.value }</button>
 		</section>
-		<button class = 'button button-primary' onClick = { refresh }>refresh</button>
 	</>
 }
 
