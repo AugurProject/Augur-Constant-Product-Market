@@ -347,18 +347,17 @@ interface ReportingProps {
 	maybeReadClient: OptionalSignal<ReadClient>
 	maybeWriteClient: OptionalSignal<WriteClient>
 	universe: OptionalSignal<AccountAddress>
-	reputationTokenAddress: OptionalSignal<AccountAddress>
+	forkValues: OptionalSignal<Awaited<ReturnType<typeof getForkValues>>>
 	currentTimeInBigIntSeconds: Signal<bigint>
+	selectedMarket: OptionalSignal<AccountAddress>
 }
 
-export const Reporting = ({ maybeReadClient, maybeWriteClient, universe, reputationTokenAddress, currentTimeInBigIntSeconds }: ReportingProps) => {
-	const marketAddress = useOptionalSignal<AccountAddress>(undefined)
+export const Reporting = ({ maybeReadClient, maybeWriteClient, universe, forkValues, currentTimeInBigIntSeconds, selectedMarket }: ReportingProps) => {
 	const marketData = useOptionalSignal<MarketData>(undefined)
 	const outcomeStakes = useOptionalSignal<readonly OutcomeStake[]>(undefined)
 	const disputeWindowInfo = useOptionalSignal<Awaited<ReturnType<typeof getDisputeWindowInfo>>>(undefined)
 	const preemptiveDisputeCrowdsourcerAddress = useOptionalSignal<AccountAddress>(undefined)
 	const preemptiveDisputeCrowdsourcerStake = useOptionalSignal<bigint>(undefined)
-	const forkValues = useOptionalSignal<Awaited<ReturnType<typeof getForkValues>>>(undefined)
 	const reportingHistory = useOptionalSignal<readonly ReportingHistoryElement[]>(undefined)
 	const isInvalidMarketAddress = useSignal<boolean>(false)
 
@@ -375,25 +374,25 @@ export const Reporting = ({ maybeReadClient, maybeWriteClient, universe, reputat
 		disputeWindowInfo.deepValue = undefined
 		preemptiveDisputeCrowdsourcerAddress.deepValue = undefined
 		preemptiveDisputeCrowdsourcerStake.deepValue = 0n
-		forkValues.deepValue = undefined
 		reportingHistory.deepValue = undefined
 	}
 
 	useSignalEffect(() => {
-		if (marketAddress.deepValue === undefined) {
-			clear()
-		} else {
-			refreshData()
-		}
+		selectedMarket.deepValue
+		clear()
+	})
+
+	useSignalEffect(() => {
+		maybeReadClient.deepValue
+		selectedMarket.deepValue
+		refreshData()
 	})
 
 	const refreshData = async () => {
-		const readClient = maybeReadClient.deepPeek()
-		if (readClient === undefined) throw new Error('missing readClient')
-		if (reputationTokenAddress.deepValue === undefined) throw new Error('missing reputationTokenAddress')
-		clear()
-		if (marketAddress.deepValue === undefined) throw new Error('market not defined')
-		marketData.deepValue = await fetchMarketData(readClient, marketAddress.deepValue)
+		if (maybeReadClient.deepValue === undefined) return
+		const readClient = maybeReadClient.deepValue
+		if (selectedMarket.deepValue === undefined) return
+		marketData.deepValue = await fetchMarketData(maybeReadClient.deepValue, selectedMarket.deepValue)
 		const currentMarketData = marketData.deepValue
 
 		const getAllInterestingPayoutNumerators = async() => {
@@ -413,7 +412,7 @@ export const Reporting = ({ maybeReadClient, maybeWriteClient, universe, reputat
 			}
 		}
 		const allInterestingPayoutNumerators = await getAllInterestingPayoutNumerators()
-		const winningOption = await getWinningPayoutNumerators(readClient, marketAddress.deepValue)
+		const winningOption = await getWinningPayoutNumerators(maybeReadClient.deepValue, selectedMarket.deepValue)
 		const winningIndex = winningOption === undefined ? -1 : allInterestingPayoutNumerators.findIndex((option) => areEqualArrays(option.payoutNumerators, winningOption))
 		outcomeStakes.deepValue = await Promise.all(allInterestingPayoutNumerators.map(async (info, index) => {
 			const payoutNumerators = info.payoutNumerators
@@ -426,19 +425,18 @@ export const Reporting = ({ maybeReadClient, maybeWriteClient, universe, reputat
 				alreadyContributedToOutcomeStake: (await getCrowdsourcerInfoByPayoutNumerator(readClient, currentMarketData.marketAddress, payoutHash))?.stake
 			}
 		}))
-		const disputeWindowAddress = await getDisputeWindow(readClient, marketAddress.deepValue)
+		const disputeWindowAddress = await getDisputeWindow(maybeReadClient.deepValue, selectedMarket.deepValue)
 		if (EthereumAddress.parse(disputeWindowAddress) !== 0n) {
-			disputeWindowInfo.deepValue = await getDisputeWindowInfo(readClient, disputeWindowAddress)
+			disputeWindowInfo.deepValue = await getDisputeWindowInfo(maybeReadClient.deepValue, disputeWindowAddress)
 		}
-		preemptiveDisputeCrowdsourcerAddress.deepValue = await getPreemptiveDisputeCrowdsourcer(readClient, marketAddress.deepValue)
+		preemptiveDisputeCrowdsourcerAddress.deepValue = await getPreemptiveDisputeCrowdsourcer(maybeReadClient.deepValue, selectedMarket.deepValue)
 		if (EthereumAddress.parse(preemptiveDisputeCrowdsourcerAddress.deepValue) !== 0n) {
-			preemptiveDisputeCrowdsourcerStake.deepValue = await getStakeOfReportingParticipant(readClient, preemptiveDisputeCrowdsourcerAddress.deepValue)
+			preemptiveDisputeCrowdsourcerStake.deepValue = await getStakeOfReportingParticipant(maybeReadClient.deepValue, preemptiveDisputeCrowdsourcerAddress.deepValue)
 		}
-		forkValues.deepValue = await getForkValues(readClient, reputationTokenAddress.deepValue)
 		if (!(currentMarketData.reportingState === 'PreReporting'
 			|| currentMarketData.reportingState === 'OpenReporting'
 			|| currentMarketData.reportingState === 'DesignatedReporting')) {
-			reportingHistory.deepValue = await getReportingHistory(readClient, marketAddress.deepValue, currentMarketData.disputeRound)
+			reportingHistory.deepValue = await getReportingHistory(maybeReadClient.deepValue, selectedMarket.deepValue, currentMarketData.disputeRound)
 		}
 	}
 
@@ -461,7 +459,7 @@ export const Reporting = ({ maybeReadClient, maybeWriteClient, universe, reputat
 						type = 'text'
 						width = '100%'
 						placeholder = 'Market address'
-						value = { marketAddress }
+						value = { selectedMarket }
 						sanitize = { (addressString: string) => addressString }
 						tryParse = { (marketAddressString: string | undefined) => {
 							if (marketAddressString === undefined) return { ok: false } as const

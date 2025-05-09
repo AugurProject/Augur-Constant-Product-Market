@@ -1,17 +1,17 @@
 import { Signal, useComputed, useSignal, useSignalEffect } from '@preact/signals'
 import { useEffect, useRef } from 'preact/hooks'
-import { AccountAddress, EthereumAddress, EthereumQuantity } from './types/types.js'
+import { AccountAddress, EthereumQuantity } from './types/types.js'
 import { OptionalSignal, useOptionalSignal } from './utils/OptionalSignal.js'
 import { createReadClient, createWriteClient, getAccounts, getChainId, ReadClient, requestAccounts, WriteClient } from './utils/ethereumWallet.js'
 import { CreateYesNoMarket } from './CreateMarketUI/components/CreateMarket.js'
-import { ensureError } from './utils/errorHandling.js'
+import { assertNever, ensureError } from './utils/errorHandling.js'
 import { Reporting } from './ReportingUI/components/Reporting.js'
 import { ClaimFunds } from './ClaimFundsUI/ClaimFunds.js'
 import { JSX } from 'preact'
 import { DAI_TOKEN_ADDRESS, DEFAULT_UNIVERSE } from './utils/constants.js'
-import { addressString, bigintToDecimalString, formatUnixTimestampIso, formatUnixTimestampIsoDate, getEthereumBalance } from './utils/ethereumUtils.js'
+import { bigintToDecimalString, formatUnixTimestampIso, formatUnixTimestampIsoDate, getEthereumBalance } from './utils/ethereumUtils.js'
 import { getUniverseName } from './utils/augurUtils.js'
-import { getReputationTokenForUniverse, getUniverseForkingInformation, isKnownUniverse } from './utils/augurContractUtils.js'
+import { getForkValues, getReputationTokenForUniverse, getUniverseForkingInformation, isKnownUniverse } from './utils/augurContractUtils.js'
 import { SomeTimeAgo } from './ReportingUI/components/SomeTimeAgo.js'
 import { Migration } from './MigrationUI/components/Migration.js'
 import { getErc20TokenBalance } from './utils/erc20.js'
@@ -20,6 +20,8 @@ import { bigintSecondsToDate, humanReadableDateDelta } from './utils/utils.js'
 import { deployAugurExtraUtilities, getCurrentBlockTimeInBigIntSeconds, isAugurExtraUtilitiesDeployed } from './utils/augurExtraUtilities.js'
 import { Trading } from './TradingUI/Trading.js'
 import { Liquidity } from './LiquidityProvidingUI/Liquidity.js'
+import { PageNotFound } from './PageNotFoundUI/PageNotFoundUI.js'
+import { paramsToHashPath, parseHashPath } from './utils/hashRouter.js'
 
 interface UniverseComponentProps {
 	universe: OptionalSignal<AccountAddress>
@@ -108,7 +110,7 @@ const WalletBalances = ({ daiBalance, repBalance, ethBalance }: WalletBalancesPr
 }
 
 interface TabsProps {
-	tabs: readonly { title: string, path: string, component: JSX.Element }[]
+	tabs: readonly { title: string, path: string, component: JSX.Element, hide: boolean }[]
 	activeTab: Signal<number>
 }
 
@@ -119,7 +121,9 @@ const Tabs = ({ tabs, activeTab }: TabsProps) => {
 	const handleTabClick = (index: number) => {
 		if (tabs[index] === undefined) throw new Error(`invalid Tab index: ${ index }`)
 		activeTab.value = index
-		window.location.hash = `#/${ tabs[index].path }`
+		const queryIndex = window.location.hash.indexOf('?')
+		const query = queryIndex !== -1 ? window.location.hash.slice(queryIndex) : ''
+		window.location.hash = `#/${ tabs[index].path }${ query }`
 	}
 
 	useEffect(() => {
@@ -144,11 +148,11 @@ const Tabs = ({ tabs, activeTab }: TabsProps) => {
 			{/* use the ref on the container */}
 			<div class = 'tabs-container' ref = { containerRef }>
 				<div class = 'tabs-inner' ref = { innerRef }>
-					{ tabs.map((tab, index) => (
+					{ tabs.map((tab, index) => ({ ...tab, index })).filter((tab) => !tab.hide).map((tab) => (
 						<button
-							key = { index }
-							class = { `tab-button ${ activeTab.value === index ? 'active' : '' }` }
-							onClick = { () => handleTabClick(index) }
+							key = { tab.index }
+							class = { `tab-button ${ activeTab.value === tab.index ? 'active' : '' }` }
+							onClick = { () => handleTabClick(tab.index) }
 						>
 							{ tab.title }
 						</button>
@@ -185,6 +189,7 @@ export function App() {
 	const chainId = useSignal<number | undefined>(undefined)
 	const inputTimeoutRef = useRef<number | null>(null)
 	const universe = useOptionalSignal<AccountAddress>(undefined)
+	const selectedMarket = useOptionalSignal<AccountAddress>(undefined)
 	const universeForkingInformation = useOptionalSignal<Awaited<ReturnType<typeof getUniverseForkingInformation>>>(undefined)
 	const reputationTokenAddress = useOptionalSignal<AccountAddress>(undefined)
 	const account = useOptionalSignal<AccountAddress>(undefined)
@@ -195,37 +200,75 @@ export function App() {
 	const repBalance = useOptionalSignal<EthereumQuantity>(undefined)
 	const daiBalance = useOptionalSignal<EthereumQuantity>(undefined)
 
+	const forkValues = useOptionalSignal<Awaited<ReturnType<typeof getForkValues>>>(undefined)
+
 	const pathSignal = useSignal<string>('')
 
 	const tabs = [
-		{ title: 'Trading', path: 'trading', component: <Trading maybeWriteClient = { maybeWriteClient } maybeReadClient = { maybeReadClient } universe = { universe } reputationTokenAddress = { reputationTokenAddress } currentTimeInBigIntSeconds = { currentTimeInBigIntSeconds }/> },
-		{ title: 'Liquidity Providing', path: 'liquidity-providing', component: <Liquidity maybeWriteClient = { maybeWriteClient } maybeReadClient = { maybeReadClient } universe = { universe } reputationTokenAddress = { reputationTokenAddress } currentTimeInBigIntSeconds = { currentTimeInBigIntSeconds }/> },
-		{ title: 'Market Creation', path: 'market-creation', component: <CreateYesNoMarket maybeReadClient = { maybeReadClient } maybeWriteClient = { maybeWriteClient } universe = { universe } reputationTokenAddress = { reputationTokenAddress } repBalance = { repBalance } daiBalance = { daiBalance }/> },
-		{ title: 'Reporting', path: 'reporting', component: <Reporting maybeReadClient = { maybeReadClient } maybeWriteClient = { maybeWriteClient } universe = { universe } reputationTokenAddress = { reputationTokenAddress } currentTimeInBigIntSeconds = { currentTimeInBigIntSeconds }/> },
-		{ title: 'Claim Funds', path: 'claim-funds', component: <ClaimFunds maybeReadClient = { maybeReadClient } maybeWriteClient = { maybeWriteClient }/> },
-		{ title: 'Migration', path: 'migration', component: <Migration maybeReadClient = { maybeReadClient } maybeWriteClient = { maybeWriteClient } reputationTokenAddress = { reputationTokenAddress } universe = { universe } universeForkingInformation = { universeForkingInformation } pathSignal = { pathSignal } currentTimeInBigIntSeconds = { currentTimeInBigIntSeconds }/> },
-		{ title: 'Participation Tokens', path: 'participation-tokens', component: <ParticipationTokens maybeReadClient = { maybeReadClient } maybeWriteClient = { maybeWriteClient } universe = { universe }/> }
+		{ title: '404', path: '404', component: <PageNotFound/>, hide: true },
+		{ title: 'Trading', path: 'trading', component: <Trading maybeWriteClient = { maybeWriteClient } maybeReadClient = { maybeReadClient } universe = { universe } forkValues = { forkValues } currentTimeInBigIntSeconds = { currentTimeInBigIntSeconds } selectedMarket = { selectedMarket } />, hide: false },
+		{ title: 'Liquidity Providing', path: 'liquidity-providing', component: <Liquidity maybeWriteClient = { maybeWriteClient } maybeReadClient = { maybeReadClient } universe = { universe } forkValues = { forkValues } currentTimeInBigIntSeconds = { currentTimeInBigIntSeconds } selectedMarket = { selectedMarket }/>, hide: false },
+		{ title: 'Market Creation', path: 'market-creation', component: <CreateYesNoMarket maybeReadClient = { maybeReadClient } maybeWriteClient = { maybeWriteClient } universe = { universe } reputationTokenAddress = { reputationTokenAddress } repBalance = { repBalance } daiBalance = { daiBalance }/>, hide: false },
+		{ title: 'Reporting', path: 'reporting', component: <Reporting maybeReadClient = { maybeReadClient } maybeWriteClient = { maybeWriteClient } universe = { universe } forkValues = { forkValues } currentTimeInBigIntSeconds = { currentTimeInBigIntSeconds } selectedMarket = { selectedMarket }/>, hide: false },
+		{ title: 'Claim Funds', path: 'claim-funds', component: <ClaimFunds maybeReadClient = { maybeReadClient } maybeWriteClient = { maybeWriteClient }/>, hide: false },
+		{ title: 'Migration', path: 'migration', component: <Migration maybeReadClient = { maybeReadClient } maybeWriteClient = { maybeWriteClient } reputationTokenAddress = { reputationTokenAddress } universe = { universe } universeForkingInformation = { universeForkingInformation } pathSignal = { pathSignal } currentTimeInBigIntSeconds = { currentTimeInBigIntSeconds }/>, hide: false },
+		{ title: 'Participation Tokens', path: 'participation-tokens', component: <ParticipationTokens maybeReadClient = { maybeReadClient } maybeWriteClient = { maybeWriteClient } universe = { universe }/>, hide: false }
 	] as const
 
-	useSignalEffect(() => {
-		window.history.pushState({}, '', pathSignal.value)
-		const [pathPart, params] = pathSignal.value.replace('#/', '').split('?')
-		const tabIndex = tabs.findIndex(tab => tab.path === pathPart)
-		if (tabIndex !== -1) {
-			activeTab.value = tabIndex
-		} else {
-			//TODO: rather show 404 than keep orignal
-		}
-		const searchParams = new URLSearchParams(params)
-		const universeParam = searchParams.get('universe')
-		const parsed = EthereumAddress.safeParse(universeParam)
+	useEffect(() => { pathSignal.value = window.location.hash }, [])
 
-		if (universeParam && parsed.success) {
-			universe.deepValue = addressString(parsed.value)
-		} else {
-			//TODO: rather show 404
-			universe.deepValue = addressString(BigInt(DEFAULT_UNIVERSE))
+	useSignalEffect(() => {
+		const hashpath = parseHashPath(pathSignal.value, tabs.map((tab) => tab.path))
+		window.history.pushState({}, '', pathSignal.value)
+
+		const goTo404 = () => {
+			activeTab.value = 0 // 404
+			window.location.hash = `#/404`
 		}
+
+		if (hashpath.tabIndex !== -1) {
+			activeTab.value = hashpath.tabIndex
+		} else {
+			goTo404()
+		}
+
+		switch(hashpath.universe.type) {
+			case 'found': {
+				universe.deepValue = hashpath.universe.address
+				break
+			}
+			case 'foundAndInvalid': {
+				goTo404()
+				break
+			}
+			case 'notFound': {
+				universe.deepValue = DEFAULT_UNIVERSE
+				break
+			}
+			default: assertNever(hashpath.universe)
+		}
+
+		switch(hashpath.selectedMarket.type) {
+			case 'found': {
+				selectedMarket.deepValue = hashpath.selectedMarket.address
+				break
+			}
+			case 'foundAndInvalid': {
+				goTo404()
+				break
+			}
+			case 'notFound': {
+				selectedMarket.deepValue = undefined
+				break
+			}
+			default: assertNever(hashpath.selectedMarket)
+		}
+	})
+
+	useSignalEffect(() => {
+		const hashpath = parseHashPath(pathSignal.value, tabs.map((tab) => tab.path))
+		if (hashpath.selectedMarket.address === selectedMarket.deepValue && hashpath.universe.address === universe.deepValue) return
+		pathSignal.value = paramsToHashPath(tabs[activeTab.value]?.path || '404', selectedMarket.deepValue, universe.deepValue)
 	})
 
 	useEffect(() => {
@@ -238,8 +281,6 @@ export function App() {
 		}, 5000)
 		return () => clearInterval(id)
 	})
-
-	useEffect(() => { pathSignal.value = window.location.hash }, [])
 
 	const setError = (error: unknown) => {
 		if (error === undefined) {
@@ -319,6 +360,17 @@ export function App() {
 			ethBalance.deepValue = await getEthereumBalance(readClient, readClient.account.address)
 		}
 		universeInfo(maybeReadClient.deepValue, universe.deepValue)
+	})
+
+	useSignalEffect(() => {
+		if (reputationTokenAddress.deepValue === undefined) return
+		if (maybeReadClient.deepValue === undefined) return
+		const updateForkValues = async () => {
+			if (reputationTokenAddress.deepValue === undefined) return
+			if (maybeReadClient.deepValue === undefined) return
+			forkValues.deepValue = await getForkValues(maybeReadClient.deepValue, reputationTokenAddress.deepValue)
+		}
+		updateForkValues()
 	})
 
 	if (universe.deepValue === undefined) return <main><p> loading... </p></main>

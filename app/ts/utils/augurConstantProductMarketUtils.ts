@@ -16,13 +16,13 @@ export const getAugurConstantProductMarket = async (client: ReadClient, marketAd
 	})
 }
 
-export const isThereAugurConstantProductmarket = async (client: ReadClient, marketAddress: AccountAddress) => {
+export const isThereAugurConstantProductMarket = async (client: ReadClient, marketAddress: AccountAddress) => {
 	return (await getAugurConstantProductMarket(client, marketAddress))[0] !== ZERO_ADDRESS
 }
 
 export const deployAugurConstantProductMarket = async (client: WriteClient, marketAddress: AccountAddress) => {
 	if (!await (isAugurConstantProductMarketRouterDeployed(client))) throw new Error('router doesnt exist')
-	if (await (isThereAugurConstantProductmarket(client, marketAddress))) throw new Error('market already exists')
+	if (await (isThereAugurConstantProductMarket(client, marketAddress))) throw new Error('market already exists')
 	return await client.writeContract({
 		chain: mainnet,
 		abi: AugurConstantProductRouter.abi,
