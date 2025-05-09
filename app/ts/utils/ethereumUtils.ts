@@ -76,6 +76,17 @@ export function bigintToDecimalStringWithUnknown(value: bigint | undefined, powe
 	return value === undefined ? '?' : bigintToDecimalString(value, power, maxDecimals)
 }
 
+export const isPracticallyInfinite = (value: bigint, power: bigint) => {
+	const googol = 10n ^ 100n
+	return value / (10n ** power) > googol
+}
+
+export function bigintToDecimalStringWithUnknownAndPracticallyInfinite(value: bigint | undefined, power: bigint, maxDecimals?: number): string {
+	if (value === undefined) return '?'
+	if (isPracticallyInfinite(value, power)) return 'Practically Infinite'
+	return bigintToDecimalString(value, power, maxDecimals)
+}
+
 export function isSameAddress(address1: `0x${ string }` | undefined, address2: `0x${ string }` | undefined) {
 	if (address1 === undefined && address2 === undefined) return true
 	if (address1 === undefined || address2 === undefined) return false

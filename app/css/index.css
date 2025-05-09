@@ -792,6 +792,7 @@ h3 {
 	font-size: 1em;
 	transition: background 0.2s, color 0.2s;
 	width: 100%;
+	white-space: nowrap;
 }
 
 .toggle-button:first-child {

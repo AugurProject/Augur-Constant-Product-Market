@@ -4,7 +4,7 @@ import { OptionalSignal, useOptionalSignal } from '../utils/OptionalSignal.js'
 import { AUGUR_SHARE_TOKEN, DAI_TOKEN_ADDRESS } from '../utils/constants.js'
 import { approveErc20Token, getAllowanceErc20Token } from '../utils/erc20.js'
 import { setErc1155ApprovalForAll } from '../utils/augurConstantProductMarketUtils.js'
-import { bigintToDecimalString, bigintToDecimalStringWithUnknown, decimalStringToBigint, isDecimalString } from '../utils/ethereumUtils.js'
+import { bigintToDecimalString, bigintToDecimalStringWithUnknown, bigintToDecimalStringWithUnknownAndPracticallyInfinite, decimalStringToBigint, isDecimalString } from '../utils/ethereumUtils.js'
 import { Input } from './Input.js'
 import { EthereumQuantity } from '../types/types.js'
 import { Toggle } from './Toggle.js'
@@ -58,7 +58,7 @@ export const TradingAndLiquidityProvidingAllowances = ({ maybeWriteClient, requi
 		<h3>Allowances</h3>
 		<div style = { { display: 'grid', gap: '0.5em', gridTemplateColumns: 'auto auto auto' } }>
 			<div style = { { alignContent: 'center' } }>
-				Allowed DAI: { bigintToDecimalStringWithUnknown(allowedDai.deepValue, 18n, 2) } DAI (required: { bigintToDecimalStringWithUnknown(requiredDaiApproval.deepValue, 18n, 2) } DAI)
+				Allowed DAI: { bigintToDecimalStringWithUnknownAndPracticallyInfinite(allowedDai.deepValue, 18n, 2) } DAI (required: { bigintToDecimalStringWithUnknown(requiredDaiApproval.deepValue, 18n, 2) } DAI)
 			</div>
 			<div style = { { display: 'flex', alignItems: 'baseline', gap: '0.5em' } }>
 				<Input

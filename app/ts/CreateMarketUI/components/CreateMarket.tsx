@@ -3,7 +3,7 @@ import { createYesNoMarket, estimateGasCreateYesNoMarket, getMarketRepBondForNew
 import { OptionalSignal, useOptionalSignal } from '../../utils/OptionalSignal.js'
 import { AccountAddress, EthereumAddress, EthereumQuantity } from '../../types/types.js'
 import { AUGUR_CONTRACT, DAI_TOKEN_ADDRESS } from '../../utils/constants.js'
-import { bigintToDecimalString, bigintToDecimalStringWithUnknown, decimalStringToBigint, formatUnixTimestampIso, isDecimalString } from '../../utils/ethereumUtils.js'
+import { bigintToDecimalString, bigintToDecimalStringWithUnknown, bigintToDecimalStringWithUnknownAndPracticallyInfinite, decimalStringToBigint, formatUnixTimestampIso, isDecimalString } from '../../utils/ethereumUtils.js'
 import { approveErc20Token, getAllowanceErc20Token } from '../../utils/erc20.js'
 import { ReadClient, WriteClient } from '../../utils/ethereumWallet.js'
 import { dateToBigintSeconds, isNumeric } from '../../utils/utils.js'
@@ -66,7 +66,7 @@ export const Allowances = ( { maybeWriteClient, universe, reputationTokenAddress
 		<h3>Allowances</h3>
 		<div style = { { display: 'grid', gap: '0.5em', gridTemplateColumns: 'auto auto auto' } }>
 			<div style = { { alignContent: 'center' } }>
-				Allowed DAI: { bigintToDecimalStringWithUnknown(allowedDai.deepValue, 18n, 2) } DAI (required: { bigintToDecimalStringWithUnknown(marketCreationCostDai.deepValue, 18n, 2) } DAI)
+				Allowed DAI: { bigintToDecimalStringWithUnknownAndPracticallyInfinite(allowedDai.deepValue, 18n, 2) } DAI (required: { bigintToDecimalStringWithUnknown(marketCreationCostDai.deepValue, 18n, 2) } DAI)
 			</div>
 			<div style = { { display: 'flex', alignItems: 'baseline', gap: '0.5em' } }>
 				<Input
@@ -96,7 +96,7 @@ export const Allowances = ( { maybeWriteClient, universe, reputationTokenAddress
 			</button>
 
 			<div style = { { alignContent: 'center' } }>
-				Allowed REP: { bigintToDecimalStringWithUnknown(allowedRep.deepValue, 18n, 2) } REP (required: { bigintToDecimalStringWithUnknown(marketCreationCostRep.deepValue, 18n, 2) } REP)
+				Allowed REP: { bigintToDecimalStringWithUnknownAndPracticallyInfinite(allowedRep.deepValue, 18n, 2) } REP (required: { bigintToDecimalStringWithUnknown(marketCreationCostRep.deepValue, 18n, 2) } REP)
 			</div>
 			<div style = { { display: 'flex', alignItems: 'baseline', gap: '0.5em' } }>
 				<Input
