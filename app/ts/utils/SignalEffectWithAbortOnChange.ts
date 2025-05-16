@@ -1,10 +1,9 @@
 import { Signal } from '@preact/signals'
-import { OptionalSignal } from './OptionalSignal.js'
+import { OptionalSignal, isOptionalSignal } from './OptionalSignal.js'
 import { useEffect } from 'preact/hooks'
 
 type UnionSignalType<T> = T extends OptionalSignal<infer U> ? U | undefined : T extends Signal<infer U> ? U extends Signal<infer Inner> ? Inner : U : never
 type SignalTypes<T extends readonly [...(Signal<unknown> | OptionalSignal<unknown>)[]]> = { [K in keyof T]: UnionSignalType<T[K]> }
-const isOptionalSignal = <T>(signal: Signal<T> | OptionalSignal<T>): signal is OptionalSignal<T> => signal instanceof OptionalSignal
 export function useSignalEffectWithAbortOnChange<T extends readonly (Signal<unknown> | OptionalSignal<unknown>)[]>(signals: T, func: (abortSignal: AbortSignal, ...values: SignalTypes<T>) => Promise<void>, onError: (error: unknown) => void) {
 	return useEffect(() => {
 		let abortController = new AbortController()
