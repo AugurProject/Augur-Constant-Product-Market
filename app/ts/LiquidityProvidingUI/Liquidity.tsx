@@ -16,6 +16,7 @@ import { BigInputBox } from '../SharedUI/BigInputBox.js'
 import { getAugurConstantProductMarketRouterAddress, isAugurConstantProductMarketRouterDeployed } from '../utils/augurDeployment.js'
 import { tickToZeroToOnePrice, zeroOnePriceToTick } from '../utils/uniswapUtils.js'
 import { ShareBalances } from '../SharedUI/ShareBalances.js'
+import { useSignalEffectWithAbortOnChange } from '../utils/SignalEffectWithAbortOnChange.js'
 
 interface LiquidityTokensProps {
 	liquidityTokens: OptionalSignal<Awaited<ReturnType<typeof getUserLpTokenIdsAndBalancesForMarket>>>
@@ -213,27 +214,11 @@ export const Liquidity = ({ maybeReadClient, maybeWriteClient, universe, forkVal
 		disputeWindowInfo.deepValue = undefined
 	})
 
-	useSignalEffect(() => { refreshMarketData(maybeReadClient.deepValue, selectedMarket.deepValue, isRouterDeployed.deepValue).catch(console.error) })
-
-	const checkIfRouterIsDeployed = async (maybeReadClient: ReadClient | undefined) => {
-		if (maybeReadClient === undefined) return
-		isRouterDeployed.deepValue = await isAugurConstantProductMarketRouterDeployed(maybeReadClient)
-	}
-	useSignalEffect(() => {
-		const updateTickSpacing = async (maybeReadClient: ReadClient | undefined, isRouterDeployed: boolean | undefined ) => {
-			if (maybeReadClient === undefined) return
-			if (isRouterDeployed !== true) return // router needs to be deployed for this call to work
-			tickSpacing.value = await getTickSpacing(maybeReadClient)
-		}
-		updateTickSpacing(maybeReadClient.deepValue, isRouterDeployed.deepValue).catch(console.error)
-	})
-
-	useSignalEffect(() => { checkIfRouterIsDeployed(maybeReadClient.deepValue).catch(console.error) })
-
 	const refreshMarketData = async (maybeReadClient: ReadClient | undefined, selectedMarket: AccountAddress | undefined, isRouterDeployed: boolean | undefined) => {
 		if (maybeReadClient === undefined) return
 		if (isRouterDeployed !== true) return
 		if (selectedMarket === undefined) return
+		console.log('refresh market')
 		isConstantProductMarketDeployed.deepValue = await isThereAugurConstantProductMarket(maybeReadClient, selectedMarket)
 		marketData.deepValue = await fetchMarketData(maybeReadClient, selectedMarket)
 		const disputeWindowAddress = await getDisputeWindow(maybeReadClient, selectedMarket)
@@ -244,12 +229,25 @@ export const Liquidity = ({ maybeReadClient, maybeWriteClient, universe, forkVal
 		}
 	}
 
+	useSignalEffectWithAbortOnChange([maybeReadClient, selectedMarket, isRouterDeployed] as const, (_abortSignal, ...params) => refreshMarketData(...params), console.error)
+
+	const checkIfRouterIsDeployed = async (maybeReadClient: ReadClient | undefined) => {
+		if (maybeReadClient === undefined) return
+		isRouterDeployed.deepValue = await isAugurConstantProductMarketRouterDeployed(maybeReadClient)
+	}
+	const updateTickSpacing = async (maybeReadClient: ReadClient | undefined, isRouterDeployed: boolean | undefined ) => {
+		if (maybeReadClient === undefined) return
+		if (isRouterDeployed !== true) return // router needs to be deployed for this call to work
+		tickSpacing.value = await getTickSpacing(maybeReadClient)
+	}
+	useSignalEffectWithAbortOnChange([maybeReadClient, isRouterDeployed] as const, (_abortSignal, ...params) => updateTickSpacing(...params), console.error)
+
+	useSignalEffectWithAbortOnChange([maybeReadClient] as const, (_abortSignal, ...params) => checkIfRouterIsDeployed(...params), console.error)
+
 	const refreshData = async () => {
 		await refreshMarketData(maybeReadClient.deepValue, selectedMarket.deepValue, isRouterDeployed.deepValue)
 		await updateShareBalances(maybeWriteClient.deepValue, marketData.deepValue, isConstantProductMarketDeployed.deepValue)
 	}
-
-	useSignalEffect(() => { updateAccountSpecificSignals(maybeWriteClient.deepValue).catch(console.error) })
 
 	const updateAccountSpecificSignals = async (maybeWriteClient: WriteClient | undefined) => {
 		if (maybeWriteClient === undefined) return
@@ -257,13 +255,15 @@ export const Liquidity = ({ maybeReadClient, maybeWriteClient, universe, forkVal
 		daiApprovedForRouter.deepValue = await getAllowanceErc20Token(maybeWriteClient, DAI_TOKEN_ADDRESS, maybeWriteClient.account.address, router)
 		sharesApprovedToRouter.deepValue = await isErc1155ApprovedForAll(maybeWriteClient, AUGUR_SHARE_TOKEN, maybeWriteClient.account.address, router)
 	}
+	useSignalEffectWithAbortOnChange([maybeWriteClient] as const, (_abortSignal, ...params) => updateAccountSpecificSignals(...params), console.error)
+
 	const updateLPTokens = async (maybeWriteClient: WriteClient | undefined, marketData: MarketData | undefined) => {
 		if (maybeWriteClient === undefined) return
 		if (marketData === undefined) return
 		liquidityTokens.deepValue = await getUserLpTokenIdsAndBalancesForMarket(maybeWriteClient, marketData.marketAddress, maybeWriteClient.account.address)
 	}
 
-	useSignalEffect(() => { updateLPTokens(maybeWriteClient.deepValue, marketData.deepValue).catch(console.error) })
+	useSignalEffectWithAbortOnChange([maybeWriteClient, marketData] as const, (_abortSignal, ...params) => updateLPTokens(...params), console.error)
 
 	const updateShareBalancesButton = async () => {
 		await updateShareBalances(maybeWriteClient.deepValue, marketData.deepValue, isConstantProductMarketDeployed.deepValue)
@@ -279,7 +279,7 @@ export const Liquidity = ({ maybeReadClient, maybeWriteClient, universe, forkVal
 		yesBalance.deepValue = shareBalances[2]
 	}
 
-	useSignalEffect(() => { updateShareBalances(maybeWriteClient.deepValue, marketData.deepValue, isConstantProductMarketDeployed.deepValue).catch(console.error) })
+	useSignalEffectWithAbortOnChange([maybeWriteClient, marketData, isConstantProductMarketDeployed] as const, (_abortSignal, ...params) => updateShareBalances(...params), console.error)
 
 	return <div class = 'subApplication'>
 		<DeployRouter isRouterDeployed = { isRouterDeployed } maybeWriteClient = { maybeWriteClient }/>
