@@ -22,7 +22,7 @@ contract AugurConstantProductShareToken is ERC1155 {
 		cash.deposit(amountInDai);
 
 		uint256[] memory tokenIds = new uint256[](3);
-        uint256[] memory values = new uint256[](3);
+		uint256[] memory values = new uint256[](3);
 
 		tokenIds[0] = TokenId.getTokenId(acpm, 0);
 		tokenIds[1] = TokenId.getTokenId(acpm, 1);
@@ -38,7 +38,7 @@ contract AugurConstantProductShareToken is ERC1155 {
 		require(holder == msg.sender || isApprovedForAll(holder, msg.sender) == true, "ERC1155: need operator approval to sell complete sets");
 
 		uint256[] memory tokenIds = new uint256[](3);
-        uint256[] memory values = new uint256[](3);
+		uint256[] memory values = new uint256[](3);
 
 		tokenIds[0] = TokenId.getTokenId(acpm, 0);
 		tokenIds[1] = TokenId.getTokenId(acpm, 1);
@@ -54,12 +54,12 @@ contract AugurConstantProductShareToken is ERC1155 {
 	}
 
 	function unsafeTransferFrom(address _from, address _to, uint256 _id, uint256 _value) public {
-        _transferFrom(_from, _to, _id, _value, bytes(""), false);
-    }
+		_transferFrom(_from, _to, _id, _value, bytes(""), false);
+	}
 
 	function unsafeBatchTransferFrom(address _from, address _to, uint256[] memory _ids, uint256[] memory _values) public {
-        _batchTransferFrom(_from, _to, _ids, _values, bytes(""), false);
-    }
+		_batchTransferFrom(_from, _to, _ids, _values, bytes(""), false);
+	}
 
 	function onBurn(uint256 _tokenId, address _target, uint256 _amount) internal override {}
 	function onMint(uint256 _tokenId, address _target, uint256 _amount) internal override {}
