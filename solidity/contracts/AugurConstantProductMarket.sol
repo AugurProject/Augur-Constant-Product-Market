@@ -3,16 +3,17 @@ pragma solidity 0.8.29;
 
 import { ERC20 } from "./ERC20.sol";
 import { IERC20 } from "./IERC20.sol";
-import { IShareToken } from "./IShareToken.sol";
+import { IAugurConstantProductShareToken } from "./IAugurConstantProductShareToken.sol";
 import { IMarket } from "./IMarket.sol";
 import { IAugur } from "./IAugur.sol";
 import { Constants } from "./Constants.sol";
 import { AddressToString } from "./AddressToString.sol";
+import { TokenId } from "./TokenId.sol";
 
 contract AugurConstantProduct is ERC20 {
 	using AddressToString for address;
 
-	IShareToken public shareToken;
+	IAugurConstantProductShareToken shareToken;
 	address public augurMarketAddress;
 	IAugur public constant augur = IAugur(Constants.AUGUR_ADDRESS);
 	uint256 public INVALID;
@@ -31,13 +32,13 @@ contract AugurConstantProduct is ERC20 {
 		unlocked = 1;
 	}
 
-	constructor(IMarket market) ERC20(string(abi.encodePacked("ACPM-", address(market).addressToString())), address(market).addressToString()) {
+	constructor(IMarket market, IAugurConstantProductShareToken acpmShareToken) ERC20(string(abi.encodePacked("ACPM-", address(market).addressToString())), address(market).addressToString()) {
 		augurMarketAddress = address(market);
-		shareToken = market.shareToken();
+		shareToken = acpmShareToken;
 		require(augur.getMarketType(market) == 0, "AugurCP: ACPM only supports Yes No Markets");
-		INVALID = shareToken.getTokenId(augurMarketAddress, 0);
-		NO = shareToken.getTokenId(augurMarketAddress, 1);
-		YES = shareToken.getTokenId(augurMarketAddress, 2);
+		INVALID = TokenId.getTokenId(address(this), 0);
+		NO = TokenId.getTokenId(address(this), 1);
+		YES = TokenId.getTokenId(address(this), 2);
 	}
 
 	function mint(address mintTo) lock external {
