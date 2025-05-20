@@ -16,4 +16,5 @@ interface IAugurConstantProduct is IERC20 {
 	function mint(address mintTo) external;
 	function burn(address sharesTo) external returns (uint256 noShare, uint256 yesShare);
 	function swap(address to, uint256 noSharesOut, uint256 yesSharesOut) external;
+	function getCloseOutSwapAmount(uint256 shareBalance, bool swapYes) external returns (uint256);
 }

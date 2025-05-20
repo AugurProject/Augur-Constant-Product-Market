@@ -486,6 +486,30 @@ export const getFee = async (client: ReadClient) => {
 	})
 }
 
+export const getCloseOutSwapAmount = async (client: ReadClient, shareBalance: bigint, swapYes: boolean) => {
+	const acpmAddress = await getAugurConstantProductMarketAddress(client)
+	const abi = vendoredACPMArtifact.contracts['contracts/AugurConstantProductMarket.sol'].AugurConstantProduct.abi
+	return await client.readContract({
+		abi: abi as Abi,
+		functionName: 'getCloseOutSwapAmount',
+		address: acpmAddress,
+		args: [shareBalance, swapYes]
+	}) as bigint
+}
+
+export const closeOut = async (client: WriteClient, deadline = YEAR_2030) => {
+	const acpmAddress = await getAugurConstantProductMarketAddress(client)
+	const routerAddress = await getAugurConstantProductMarketRouterAddress()
+	const abi = augurConstantProductMarketContractArtifact.contracts['contracts/AugurConstantProductMarketRouter.sol'].AugurConstantProductRouter.abi
+	return await client.writeContract({
+		chain: mainnet,
+		abi: abi as Abi,
+		functionName: 'closeOut',
+		address: routerAddress,
+		args: [acpmAddress, deadline]
+	})
+}
+
 export const addLiquidity = async (client: WriteClient, sharesToBuy: bigint) => {
 	const acpmAddress = await getAugurConstantProductMarketAddress(client)
 	const routerAddress = await getAugurConstantProductMarketRouterAddress()

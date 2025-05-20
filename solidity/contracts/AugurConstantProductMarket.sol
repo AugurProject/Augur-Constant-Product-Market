@@ -82,8 +82,6 @@ contract AugurConstantProduct is ERC20 {
 	function swap(address to, uint256 noSharesOut, uint256 yesSharesOut) lock external {
 		shareTransfer(address(this), to, noSharesOut, yesSharesOut);
 
-		// TODO callee call?
-
 		(uint256 poolNo, uint256 poolYes) = noYesShareBalances(address(this));
 
 		uint256 noSharesIn = poolNo > noBalance - noSharesOut ? poolNo - (noBalance - noSharesOut) : 0;
@@ -146,6 +144,24 @@ contract AugurConstantProduct is ERC20 {
 			amounts[1] = yesAmount;
 		}
 		shareToken.unsafeBatchTransferFrom(from, to, tokenIds, amounts);
+	}
+
+	// formula where x = yes shares owned when swapping yes
+	// s = (nf + 1000x -xf - 1000y - 1000n + sqrt(x^2f^2 - 2000x^2f + 1000000x^2 - 2000000nx - 2nxf^2 + 4000nxf + 2000000xy - 2000xfy + 1000000n^2 + n^2f^2 - 2000n^2f + 1000000y^2 + 2000000ny - 2000nfy)) / 2(1000 - f)
+	// s = swap amount
+	// x = yes shares owned
+	// n = pool no
+	// y = pool yes
+	// f = fee
+	function getCloseOutSwapAmount(uint256 shareBalance, bool swapYes) external returns (uint256) {
+		int256 n = swapYes ? int256(noBalance) : int256(yesBalance);
+		int256 y = swapYes ? int256(yesBalance) : int256(noBalance);
+		int256 x = int256(shareBalance);
+		int256 f = int256(fee);
+		int256 segment1 = (n * f) + (1000 * x) - (x * f) - (1000 * y) - (1000 * n);
+		int256 segment2 = int256(sqrt(uint256((x*x*f*f) - (2000*x*x*f) + (1000000*x*x) - (2000000*n*x) - (2*n*x*f*f) + (4000*n*x*f) + (2000000*x*y) - (2000*x*f*y) + (1000000*n*n) + (n*n*f*f) - (2000*n*n*f) + (1000000*y*y) + (2000000*n*y) - (2000*n*f*y))));
+		int256 solution = (segment1 + segment2) / int256((2 * (1000 - fee)));
+		return uint256(solution);
 	}
 
 	// babylonian method (https://en.wikipedia.org/wiki/Methods_of_computing_square_roots#Babylonian_method)
