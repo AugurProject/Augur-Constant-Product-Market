@@ -1,4 +1,4 @@
-import { useComputed, useSignal, useSignalEffect } from '@preact/signals'
+import { useComputed, useSignal } from '@preact/signals'
 import { createYesNoMarket, estimateGasCreateYesNoMarket, getMarketRepBondForNewMarket, getMaximumMarketEndDate, getValidityBond } from '../../utils/augurContractUtils.js'
 import { OptionalSignal, useOptionalSignal } from '../../utils/OptionalSignal.js'
 import { AccountAddress, EthereumAddress, EthereumQuantity } from '../../types/types.js'
@@ -10,6 +10,7 @@ import { dateToBigintSeconds, isNumeric } from '../../utils/utils.js'
 import { useEffect } from 'preact/hooks'
 import { Input } from '../../SharedUI/Input.js'
 import { useThrottledSignalEffect } from '../../SharedUI/useThrottledSignalEffect.js'
+import { useSignalEffectWithAbortOnChange } from '../../utils/SignalEffectWithAbortOnChange.js'
 
 interface AllowancesProps {
 	maybeWriteClient: OptionalSignal<WriteClient>
@@ -205,9 +206,7 @@ export const CreateYesNoMarket = ({ maybeReadClient, maybeWriteClient, universe,
 		designatedReporterAddress.deepValue = maybeWriteClient.deepValue?.account.address
 	}, [maybeWriteClient.deepValue?.account.address])
 
-	useSignalEffect(() => {
-		refresh(maybeReadClient.deepValue, maybeWriteClient.deepValue, universe.deepValue, reputationTokenAddress.deepValue).catch(console.error)
-	})
+	useSignalEffectWithAbortOnChange([maybeReadClient, maybeWriteClient, universe, reputationTokenAddress] as const, (_abortSignal, ...params) => refresh(...params), console.error)
 
 	const createMarketDisabled = useComputed(() => {
 		if (universe.deepValue === undefined) return true

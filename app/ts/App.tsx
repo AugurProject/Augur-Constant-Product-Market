@@ -22,6 +22,7 @@ import { Trading } from './TradingUI/Trading.js'
 import { Liquidity } from './LiquidityProvidingUI/Liquidity.js'
 import { PageNotFound } from './PageNotFoundUI/PageNotFoundUI.js'
 import { paramsToHashPath, parseHashPath } from './utils/hashRouter.js'
+import { useSignalEffectWithAbortOnChange } from './utils/SignalEffectWithAbortOnChange.js'
 
 interface UniverseComponentProps {
 	universe: OptionalSignal<AccountAddress>
@@ -252,7 +253,6 @@ export function App() {
 			}
 			default: assertNever(hashpath.universe)
 		}
-
 		switch(hashpath.selectedMarket.type) {
 			case 'found': {
 				selectedMarket.deepValue = hashpath.selectedMarket.address
@@ -354,35 +354,31 @@ export function App() {
 
 	const updateTokenBalances = async (writeClient: WriteClient | undefined, reputationTokenAddress: AccountAddress | undefined) => {
 		if (writeClient === undefined) return
+		if (reputationTokenAddress === undefined) return
 		const daiPromise = getErc20TokenBalance(writeClient, DAI_TOKEN_ADDRESS, writeClient.account.address)
 		const ethPromise = getEthereumBalance(writeClient, writeClient.account.address)
-		if (reputationTokenAddress) {
-			repBalance.deepValue = await getErc20TokenBalance(writeClient, reputationTokenAddress, writeClient.account.address)
-		}
+		repBalance.deepValue = await getErc20TokenBalance(writeClient, reputationTokenAddress, writeClient.account.address)
 		daiBalance.deepValue = await daiPromise
 		ethBalance.deepValue = await ethPromise
 	}
+	const universeInfo = async (readClient: ReadClient | undefined, universe: AccountAddress | undefined) => {
+		if (readClient === undefined) return
+		if (universe === undefined) return
+		const universeForkingPromise = getUniverseForkingInformation(readClient, universe)
+		reputationTokenAddress.deepValue = await getReputationTokenForUniverse(readClient, universe)
+		universeForkingInformation.deepValue = await universeForkingPromise
+	}
 
-	useSignalEffect(() => {
-		const universeInfo = async (readClient: ReadClient | undefined, universe: AccountAddress | undefined) => {
-			if (readClient === undefined) return
-			if (universe === undefined) return
-			const universeForkingPromise = getUniverseForkingInformation(readClient, universe)
-			reputationTokenAddress.deepValue = await getReputationTokenForUniverse(readClient, universe)
-			universeForkingInformation.deepValue = await universeForkingPromise
-		}
-		universeInfo(maybeReadClient.deepValue, universe.deepValue).catch(console.error)
-	})
+	useSignalEffectWithAbortOnChange([maybeReadClient, universe] as const, (_abortSignal, ...params) => universeInfo(...params), console.error)
 
-	useSignalEffect(() => { updateTokenBalances(maybeWriteClient.deepValue, reputationTokenAddress.deepValue).catch(console.error) })
+	useSignalEffectWithAbortOnChange([maybeWriteClient, reputationTokenAddress] as const, (_abortSignal, ...params) => updateTokenBalances(...params), console.error)
 
 	const updateForkValues = async (maybeReadClient: ReadClient | undefined, reputationTokenAddress: AccountAddress | undefined) => {
 		if (reputationTokenAddress === undefined) return
 		if (maybeReadClient === undefined) return
 		forkValues.deepValue = await getForkValues(maybeReadClient, reputationTokenAddress)
 	}
-
-	useSignalEffect(() => { updateForkValues(maybeReadClient.deepValue, reputationTokenAddress.deepValue).catch(console.error) })
+	useSignalEffectWithAbortOnChange([maybeWriteClient, reputationTokenAddress] as const, (_abortSignal, ...params) => updateForkValues(...params), console.error)
 
 	if (universe.deepValue === undefined) return <main><p> loading... </p></main>
 

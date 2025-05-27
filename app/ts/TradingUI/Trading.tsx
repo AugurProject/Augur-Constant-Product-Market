@@ -16,6 +16,7 @@ import { BigInputBox } from '../SharedUI/BigInputBox.js'
 import { getAugurConstantProductMarketRouterAddress, isAugurConstantProductMarketRouterDeployed } from '../utils/augurDeployment.js'
 import { min } from '../utils/utils.js'
 import { ShareBalances } from '../SharedUI/ShareBalances.js'
+import { useSignalEffectWithAbortOnChange } from '../utils/SignalEffectWithAbortOnChange.js'
 
 interface TradingViewProps {
 	maybeReadClient: OptionalSignal<ReadClient>
@@ -57,20 +58,15 @@ const TradingView = ({ maybeReadClient, maybeWriteClient, marketData, currentTim
 		}
 	})
 
-	const updateSharesOut = async (maybeReadClient: ReadClient | undefined, marketData: MarketData | undefined, daiInput: bigint) => {
-		if (marketData === undefined) return
-		if (maybeReadClient === undefined) return
-		const baseSharesExpected = daiInput / marketData.numTicks
-		const expectedSwapShares = await expectedSharesAfterSwap(maybeReadClient, marketData.marketAddress, yesSelected.value === 'No', baseSharesExpected)
-		expectedSharesOut.deepValue = baseSharesExpected + expectedSwapShares
-	}
-
-	useSignalEffect(() => {
+	const updateSharesOut = async (buySelected: 'Buy' | 'Sell', maybeReadClient: ReadClient | undefined, marketData: MarketData | undefined, daiInput: bigint | undefined) => {
 		expectedSharesOut.deepValue = undefined
-		if (buySelected.value === 'Buy') {
-			if (daiInputAmountToBuy.deepValue === undefined) return
-			// TODO, fix race conditions
-			updateSharesOut(maybeReadClient.deepValue, marketData.deepValue, daiInputAmountToBuy.deepValue).catch(console.error)
+		if (buySelected === 'Buy') {
+			if (daiInput === undefined) return
+			if (marketData === undefined) return
+			if (maybeReadClient === undefined) return
+			const baseSharesExpected = daiInput / marketData.numTicks
+			const expectedSwapShares = await expectedSharesAfterSwap(maybeReadClient, marketData.marketAddress, yesSelected.value === 'No', baseSharesExpected)
+			expectedSharesOut.deepValue = baseSharesExpected + expectedSwapShares
 		} else {
 			if (yesSelected.value === 'Yes') {
 				console.error('TODO: not implemented')
@@ -78,7 +74,9 @@ const TradingView = ({ maybeReadClient, maybeWriteClient, marketData, currentTim
 				console.error('TODO: not implemented')
 			}
 		}
-	})
+	}
+
+	useSignalEffectWithAbortOnChange([buySelected, maybeReadClient, marketData, daiInputAmountToBuy] as const, (_abortSignal, ...params) => updateSharesOut(...params), console.error)
 
 	const updateShareBalances = async (maybeWriteClient: WriteClient | undefined, marketData: MarketData | undefined) => {
 		if (maybeWriteClient === undefined) return
@@ -89,13 +87,7 @@ const TradingView = ({ maybeReadClient, maybeWriteClient, marketData, currentTim
 		yesBalance.deepValue = shareBalances[2]
 	}
 
-	useSignalEffect(() => {
-		updateShareBalances(maybeWriteClient.deepValue, marketData.deepValue).catch(console.error)
-	})
-
-	useSignalEffect(() => {
-		updateCanExits(maybeReadClient.deepValue, marketData.deepValue, invalidBalance.deepValue).catch(console.error)
-	})
+	useSignalEffectWithAbortOnChange([maybeWriteClient, marketData] as const, (_abortSignal, ...params) => updateShareBalances(...params), console.error)
 
 	const updateCanExits = async (maybeReadClient: ReadClient | undefined, marketData: MarketData | undefined, invalidBalance: bigint | undefined) => {
 		if (maybeReadClient === undefined) return
@@ -133,6 +125,8 @@ const TradingView = ({ maybeReadClient, maybeWriteClient, marketData, currentTim
 			canExitYesExpectedDai.deepValue = 0n
 		}
 	}
+
+	useSignalEffectWithAbortOnChange([maybeReadClient, marketData, invalidBalance] as const, (_abortSignal, ...params) => updateCanExits(...params), console.error)
 
 	const buyYes = async () => {
 		if (maybeWriteClient.deepValue === undefined) return
@@ -288,15 +282,6 @@ export const Trading = ({ maybeReadClient, maybeWriteClient, universe, forkValue
 		isConstantProductMarketDeployed.deepValue = undefined
 	})
 
-	useSignalEffect(() => { refreshMarketData(maybeReadClient.deepValue, selectedMarket.deepValue, isRouterDeployed.deepValue).catch(console.error) })
-
-	const checkIfRouterIsDeployed = async (maybeReadClient: ReadClient | undefined) => {
-		if (maybeReadClient === undefined) return
-		isRouterDeployed.deepValue = await isAugurConstantProductMarketRouterDeployed(maybeReadClient)
-	}
-
-	useSignalEffect(() => { checkIfRouterIsDeployed(maybeReadClient.deepValue).catch(console.error) })
-
 	const refreshMarketData = async (maybeReadClient: ReadClient | undefined, selectedMarket: AccountAddress | undefined, isRouterDeployed: boolean | undefined) => {
 		if (maybeReadClient === undefined) return
 		if (isRouterDeployed !== true) return
@@ -311,11 +296,18 @@ export const Trading = ({ maybeReadClient, maybeWriteClient, universe, forkValue
 		}
 	}
 
+	useSignalEffectWithAbortOnChange([maybeReadClient, selectedMarket, isRouterDeployed] as const, (_abortSignal, ...params) => refreshMarketData(...params), console.error)
+
+	const checkIfRouterIsDeployed = async (maybeReadClient: ReadClient | undefined) => {
+		if (maybeReadClient === undefined) return
+		isRouterDeployed.deepValue = await isAugurConstantProductMarketRouterDeployed(maybeReadClient)
+	}
+
+	useSignalEffectWithAbortOnChange([maybeReadClient] as const, (_abortSignal, ...params) => checkIfRouterIsDeployed(...params), console.error)
+
 	const refreshData = async () => {
 		await refreshMarketData(maybeReadClient.deepValue, selectedMarket.deepValue, isRouterDeployed.deepValue)
 	}
-
-	useSignalEffect(() => { updateAccountSpecificSignals(maybeWriteClient.deepValue).catch(console.error) })
 
 	const updateAccountSpecificSignals = async (maybeWriteClient: WriteClient | undefined) => {
 		if (maybeWriteClient === undefined) return
@@ -323,6 +315,7 @@ export const Trading = ({ maybeReadClient, maybeWriteClient, universe, forkValue
 		daiApprovedForRouter.deepValue = await getAllowanceErc20Token(maybeWriteClient, DAI_TOKEN_ADDRESS, maybeWriteClient.account.address, router)
 		sharesApprovedToRouter.deepValue = await isErc1155ApprovedForAll(maybeWriteClient, AUGUR_SHARE_TOKEN, maybeWriteClient.account.address, router)
 	}
+	useSignalEffectWithAbortOnChange([maybeWriteClient] as const, (_abortSignal, ...params) => updateAccountSpecificSignals(...params), console.error)
 
 	return <div class = 'subApplication'>
 		<div style = 'display: grid; width: 100%; gap: 10px;'>

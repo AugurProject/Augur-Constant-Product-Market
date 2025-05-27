@@ -12,6 +12,7 @@ import { ReportedScalarInputs, ScalarInput } from '../../SharedUI/ScalarMarketRe
 import { Input } from '../../SharedUI/Input.js'
 import { assertNever } from '../../utils/errorHandling.js'
 import { SelectUniverse } from '../../SharedUI/SelectUniverse.js'
+import { useSignalEffectWithAbortOnChange } from '../../utils/SignalEffectWithAbortOnChange.js'
 
 interface ForkMigrationProps {
 	marketData: OptionalSignal<MarketData>
@@ -379,7 +380,7 @@ export const Reporting = ({ maybeReadClient, maybeWriteClient, universe, forkVal
 		reportingHistory.deepValue = undefined
 	})
 
-	useSignalEffect(() => { refreshData(maybeReadClient.deepValue, selectedMarket.deepValue).catch(console.error) })
+	useSignalEffectWithAbortOnChange([maybeReadClient, selectedMarket] as const, (_abortSignal, ...params) => refreshData(...params), console.error)
 
 	const refreshData = async (maybeReadClient: ReadClient | undefined, selectedMarket: AccountAddress | undefined) => {
 		if (maybeReadClient === undefined) return

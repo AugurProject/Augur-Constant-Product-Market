@@ -49,3 +49,5 @@ export class OptionalSignal<T> extends Signal<Signal<T> | undefined> {
 export function useOptionalSignal<T>(value: Signal<T> | T | undefined, startUndefined?: boolean) {
 	return useMemo(() => new OptionalSignal<T>(value, startUndefined), []);
 }
+
+export const isOptionalSignal = <T>(signal: Signal<T> | OptionalSignal<T>): signal is OptionalSignal<T> => signal instanceof OptionalSignal
