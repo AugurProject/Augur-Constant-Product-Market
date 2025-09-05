@@ -47,7 +47,7 @@ describe('Contract Test Suite', () => {
 		// Approve Share Token
 
 		const router = await getAugurConstantProductMarketRouterAddress()
-		const shareTokenAddress = await getShareToken(client)
+		const shareTokenAddress = await getShareToken()
 		await setERC1155Approval(client, shareTokenAddress, router, true)
 
 		const originalDaiBalance = await getCashBalance(client)
@@ -114,7 +114,7 @@ describe('Contract Test Suite', () => {
 		await approveCash(client)
 		await approveCash(participantClient1)
 		const router = await getAugurConstantProductMarketRouterAddress()
-		const shareTokenAddress = await getShareToken(client)
+		const shareTokenAddress = await getShareToken()
 		await setERC1155Approval(client, shareTokenAddress, router, true)
 		await setERC1155Approval(participantClient1, shareTokenAddress, router, true)
 
@@ -178,7 +178,7 @@ describe('Contract Test Suite', () => {
 		await deployAugurConstantProductMarketContract(client)
 
 		const lpToBuy = 10000000n
-		const shareTokenAddress = await getShareToken(participantClient1)
+		const shareTokenAddress = await getShareToken()
 		const router = await getAugurConstantProductMarketRouterAddress()
 		await approveCash(client)
 		await approveCash(participantClient1)
@@ -227,7 +227,7 @@ describe('Contract Test Suite', () => {
 		const participantClient1 = createWriteClient(mockWindow, TEST_ADDRESSES[1], 0)
 		await deployAugurConstantProductMarketContract(liquidityProviderClient)
 
-		const shareTokenAddress = await getShareToken(participantClient1)
+		const shareTokenAddress = await getShareToken()
 		const router = await getAugurConstantProductMarketRouterAddress()
 
 		const lpToBuy = 10000000n
@@ -277,7 +277,7 @@ describe('Contract Test Suite', () => {
 		const participantClient1 = createWriteClient(mockWindow, TEST_ADDRESSES[1], 0)
 		await deployAugurConstantProductMarketContract(liquidityProviderClient)
 
-		const shareTokenAddress = await getShareToken(participantClient1)
+		const shareTokenAddress = await getShareToken()
 		const router = await getAugurConstantProductMarketRouterAddress()
 
 		const lpToBuy = 10000000n
@@ -318,7 +318,7 @@ describe('Contract Test Suite', () => {
 		const participantClient1 = createWriteClient(mockWindow, TEST_ADDRESSES[1], 0)
 		await deployAugurConstantProductMarketContract(liquidityProviderClient)
 
-		const shareTokenAddress = await getShareToken(participantClient1)
+		const shareTokenAddress = await getShareToken()
 		const router = await getAugurConstantProductMarketRouterAddress()
 
 		const lpToBuy = 10000000n
@@ -382,7 +382,7 @@ describe('Contract Test Suite', () => {
 		await approveCash(participantClient2)
 
 		const router = await getAugurConstantProductMarketRouterAddress()
-		const shareTokenAddress = await getShareToken(participantClient1)
+		const shareTokenAddress = await getShareToken()
 		const acpmAddress = await getAugurConstantProductMarketAddress(participantClient1)
 		await setERC1155Approval(liquidityProviderClient1, shareTokenAddress, router, true)
 		await setERC1155Approval(liquidityProviderClient2, shareTokenAddress, router, true)
@@ -635,7 +635,7 @@ describe('Contract Test Suite', () => {
 		await approveCash(participantClient1)
 		await approveCash(participantClient2)
 
-		const shareTokenAddress = await getShareToken(participantClient1)
+		const shareTokenAddress = await getShareToken()
 		const router = await getAugurConstantProductMarketRouterAddress()
 		await setERC1155Approval(liquidityProviderClient, shareTokenAddress, router, true)
 		await setERC1155Approval(participantClient1, shareTokenAddress, router, true)
@@ -677,7 +677,7 @@ describe('Contract Test Suite', () => {
 				const participantClient2 = createWriteClient(mockWindow, TEST_ADDRESSES[2], 0)
 				await deployAugurConstantProductMarketContract(liquidityProviderClient)
 				const acpmAddress = await getAugurConstantProductMarketAddress(participantClient1)
-				const shareTokenAddress = await getShareToken(participantClient1)
+				const shareTokenAddress = await getShareToken()
 				const router = await getAugurConstantProductMarketRouterAddress()
 
 				const lpToBuy = 10000000n
@@ -764,7 +764,7 @@ describe('Contract Test Suite', () => {
 				const liquidityProviderClient = createWriteClient(mockWindow, TEST_ADDRESSES[0], 0)
 				const participantClient = createWriteClient(mockWindow, TEST_ADDRESSES[1], 0)
 				await deployAugurConstantProductMarketContract(liquidityProviderClient)
-				const shareTokenAddress = await getShareToken(participantClient)
+				const shareTokenAddress = await getShareToken()
 				const router = await getAugurConstantProductMarketRouterAddress()
 
 				const lpToBuy = 1000000000n
@@ -881,7 +881,7 @@ describe('Contract Test Suite', () => {
 		const liquidityProviderClient = createWriteClient(mockWindow, TEST_ADDRESSES[0], 0)
 		const participantClient1 = createWriteClient(mockWindow, TEST_ADDRESSES[1], 0)
 		await deployAugurConstantProductMarketContract(liquidityProviderClient)
-		const shareTokenAddress = await getShareToken(participantClient1)
+		const shareTokenAddress = await getShareToken()
 		const router = await getAugurConstantProductMarketRouterAddress()
 
 		const lpToBuy = 100000000n

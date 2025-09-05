@@ -35,6 +35,9 @@ const ContractArtifact = funtypes.ReadonlyObject({
 		'contracts/AugurConstantProductMarketRouter.sol': funtypes.ReadonlyObject({
 			AugurConstantProductRouter: ContractDefinition
 		}),
+		'contracts/AugurConstantProductShareToken.sol': funtypes.ReadonlyObject({
+			AugurConstantProductShareToken: ContractDefinition
+		}),
 	}),
 })
 
@@ -249,6 +252,11 @@ export async function ensureProxyDeployerDeployed(client: WriteClient): Promise<
 	await client.waitForTransactionReceipt({ hash: deployHash })
 }
 
+export function getAugurConstantProductShareTokenAddress() {
+	const bytecode: `0x${ string }` = `0x${ augurConstantProductMarketContractArtifact.contracts['contracts/AugurConstantProductShareToken.sol'].AugurConstantProductShareToken.evm.bytecode.object }`
+	return getContractAddress({ bytecode, from: addressString(PROXY_DEPLOYER_ADDRESS), opcode: 'CREATE2', salt: numberToBytes(0) })
+}
+
 export function getAugurConstantProductMarketFactoryAddress() {
 	const bytecode: `0x${ string }` = `0x${ augurConstantProductMarketContractArtifact.contracts['contracts/AugurConstantProductMarketFactory.sol'].AugurConstantProductMarketFactory.evm.bytecode.object }`
 	return getContractAddress({ bytecode, from: addressString(PROXY_DEPLOYER_ADDRESS), opcode: 'CREATE2', salt: numberToBytes(0) })
@@ -266,6 +274,11 @@ export const isAugurConstantProductMarketFactoryDeployed = async (client: ReadCl
 	return deployedBytecode === expectedDeployedBytecode
 }
 
+export const deployAugurConstantProductShareTokenTransaction = () => {
+	const bytecode: `0x${ string }` = `0x${ augurConstantProductMarketContractArtifact.contracts['contracts/AugurConstantProductShareToken.sol'].AugurConstantProductShareToken.evm.bytecode.object }`
+	return { to: addressString(PROXY_DEPLOYER_ADDRESS), data: bytecode } as const
+}
+
 export const deployAugurConstantProductMarketFactoryTransaction = () => {
 	const bytecode: `0x${ string }` = `0x${ augurConstantProductMarketContractArtifact.contracts['contracts/AugurConstantProductMarketFactory.sol'].AugurConstantProductMarketFactory.evm.bytecode.object }`
 	return { to: addressString(PROXY_DEPLOYER_ADDRESS), data: bytecode } as const
@@ -274,6 +287,12 @@ export const deployAugurConstantProductMarketFactoryTransaction = () => {
 export const deployAugurConstantProductMarketRouterTransaction = () => {
 	const bytecode: `0x${ string }` = `0x${ augurConstantProductMarketContractArtifact.contracts['contracts/AugurConstantProductMarketRouter.sol'].AugurConstantProductRouter.evm.bytecode.object }`
 	return { to: addressString(PROXY_DEPLOYER_ADDRESS), data: bytecode } as const
+}
+
+export const ensureAugurConstantProductShareTokenDeployed = async (client: WriteClient) => {
+	await ensureProxyDeployerDeployed(client)
+	const hash = await client.sendTransaction(deployAugurConstantProductShareTokenTransaction())
+	await client.waitForTransactionReceipt({ hash })
 }
 
 export const ensureAugurConstantProductMarketFactoryDeployed = async (client: WriteClient) => {
@@ -307,11 +326,36 @@ export const isAugurConstantProductMarketDeployed = async (client: ReadClient) =
 }
 
 export const deployAugurConstantProductMarketContract = async (client: WriteClient, duplicationTest:boolean = false, newMarket:boolean = false) => {
-    if (!duplicationTest) await ensureAugurConstantProductMarketFactoryDeployed(client)
-	if (!duplicationTest) await ensureAugurConstantProductMarketRouterDeployed(client)
 	const acpmFactoryAddress = await getAugurConstantProductMarketFactoryAddress()
-    const marketAddress = (!duplicationTest || newMarket) ? await deployAugurMarket(client) : augurMarketAddress
 	const abi = augurConstantProductMarketContractArtifact.contracts['contracts/AugurConstantProductMarketFactory.sol'].AugurConstantProductMarketFactory.abi
+
+	if (!duplicationTest) {
+		await ensureAugurConstantProductShareTokenDeployed(client)
+		await ensureAugurConstantProductMarketFactoryDeployed(client)
+		await ensureAugurConstantProductMarketRouterDeployed(client)
+
+		const acpmRouterAddress = await getAugurConstantProductMarketRouterAddress()
+		const acpmShareTokenAddress = await getAugurConstantProductShareTokenAddress()
+
+		const routerAbi = augurConstantProductMarketContractArtifact.contracts['contracts/AugurConstantProductMarketRouter.sol'].AugurConstantProductRouter.abi
+		await client.writeContract({
+			chain: mainnet,
+			abi: routerAbi as Abi,
+			functionName: 'initialize',
+			address: acpmRouterAddress,
+			args: [acpmShareTokenAddress]
+		})
+
+		await client.writeContract({
+			chain: mainnet,
+			abi: abi as Abi,
+			functionName: 'initialize',
+			address: acpmFactoryAddress,
+			args: [acpmShareTokenAddress]
+		})
+	}
+
+	const marketAddress = (!duplicationTest || newMarket) ? await deployAugurMarket(client) : augurMarketAddress
 	await client.writeContract({
 		chain: mainnet,
 		abi: abi as Abi,
@@ -442,15 +486,8 @@ export const getPoolLiquidityBalance = async (client: WriteClient) => {
 	})
 }
 
-export const getShareToken = async (client: ReadClient) => {
-	const acpmAddress = await getAugurConstantProductMarketAddress(client)
-	const abi = vendoredACPMArtifact.contracts['contracts/AugurConstantProductMarket.sol'].AugurConstantProduct.abi
-	return await client.readContract({
-		abi,
-		functionName: 'shareToken',
-		address: acpmAddress,
-		args: []
-	})
+export const getShareToken = async () => {
+	return getAugurConstantProductShareTokenAddress()
 }
 
 export const getShareBalances = async (client: ReadClient, account: Address) => {

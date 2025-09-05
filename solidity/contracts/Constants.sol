@@ -2,6 +2,7 @@ pragma solidity 0.8.29;
 
 library Constants {
 	address constant AUGUR_ADDRESS = 0x23916a8F5C3846e3100e5f587FF14F3098722F5d;
+	address constant AUGUR_OICASH = 0xd2486eD7Fdb3F2325d95e4E648F2c92aA2948fF5;
 	address constant DAI_ADDRESS = 0x6B175474E89094C44Da98b954EedeAC495271d0F;
 	address constant SHARE_TOKEN = 0x9e4799ff2023819b1272eee430eadf510eDF85f0;
 	uint48 constant YEAR_2099 = 4080321626;
